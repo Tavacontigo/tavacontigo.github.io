@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlipBook 3D | Tu Biblioteca Interactiva</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    </script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Merriweather', 'serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom UI Styles */
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Premium Paper Texture and Shadows */
+        .paper-page {
+            background-color: #faf9f6;
+            background-image: linear-gradient(to right, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0) 4%, rgba(0,0,0,0) 96%, rgba(0,0,0,0.04) 100%);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.05);
+            color: #1f2937; /* Gray 800 */
+        }
+        
+        .dark .paper-page {
+            background-color: #1e293b; /* Slate 800 */
+            background-image: linear-gradient(to right, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 4%, rgba(0,0,0,0) 96%, rgba(0,0,0,0.2) 100%);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.3);
+            color: #e2e8f0; /* Slate 200 */
+        }
+
+        /* Hide scrollbars for reading content but allow scrolling if text is too large */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Typography styles for book content */
+        .book-content h2 { font-size: 1.5em; font-weight: bold; margin-bottom: 1rem; color: inherit; }
+        .book-content h3 { font-size: 1.25em; font-weight: bold; margin-bottom: 0.75rem; margin-top: 1.5rem; }
+        .book-content p { margin-bottom: 1rem; text-indent: 1.5rem; text-align: justify; }
+        .book-content p:first-of-type { text-indent: 0; }
+        .book-content blockquote { font-style: italic; border-left: 3px solid #3b82f6; padding-left: 1rem; margin: 1.5rem 0; color: #4b5563; }
+        .dark .book-content blockquote { color: #9ca3af; border-left-color: #60a5fa; }
+
+        /* 3D Perspective Utility */
+        .perspective-1000 { perspective: 1000px; }
+        
+        /* Smooth transitions for panels */
+        .panel-slide-out { transform: translateX(100%); }
+        .panel-slide-in { transform: translateX(0); }
+        
+        /* Loader Animation */
+        @keyframes pulse-book {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+        }
+        .animate-pulse-book { animation: pulse-book 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 transition-colors duration-300 overflow-hidden">
+
+    <div id="app" class="flex flex-col h-screen relative">
+        
+        <!-- Área Principal del Visor -->
+        <main class="flex-1 relative flex justify-center items-center bg-slate-200/50 dark:bg-slate-950/50 overflow-hidden" id="viewer-container">
+            
+            <!-- Estado de Carga -->
+            <div id="loading-state" class="absolute inset-0 z-50 bg-slate-100/90 dark:bg-slate-900/90 backdrop-blur-md flex flex-col items-center justify-center hidden">
+                <i class="fa-solid fa-file-pdf fa-bounce text-5xl text-red-600 mb-6"></i>
+                <p class="text-xl font-bold font-serif mb-2" id="loading-text">Procesando documento...</p>
+                <div class="w-64 h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div id="loading-progress" class="h-full bg-red-600 w-0 transition-all duration-300"></div>
+                </div>
+            </div>
+            
+            <!-- Estado Vacío (cuando no se recibe ninguna URL) -->
+            <div id="empty-state" class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 p-8 text-center max-w-md">
+                <div class="w-24 h-24 bg-white dark:bg-slate-800 rounded-3xl shadow-xl flex items-center justify-center mb-6 transform rotate-3">
+                    <i class="fa-regular fa-file-pdf text-5xl text-red-500"></i>
+                </div>
+                <h2 class="text-2xl font-bold mb-3 font-serif text-slate-800 dark:text-slate-200">Previsualizador PDF 3D</h2>
+                <p class="text-base mb-2">No se especificó ningún PDF en la URL.</p>
+                <p class="text-xs opacity-70">Usa el formato: <code class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded break-all">flipbook.html?URL_DEL_PDF</code></p>
+            </div>
+
+            <!-- Contenedor del Libro -->
+            <div id="book-wrapper" class="hidden shadow-2xl transition-transform duration-500 flex justify-center items-center p-4 sm:p-10 w-full h-full">
+                <!-- StPageFlip requiere esta estructura específica -->
+                <div id="reader-book" class="shadow-[0_0_30px_rgba(0,0,0,0.3)]">
+                    <!-- Páginas renderizadas (canvas) se inyectarán aquí -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- ESTADO GLOBAL ---
+        let pageFlip = null;
+        let audioCtx = null;
+        let noiseBuffer = null;
+
+        // Inicialización de sonido de papel realista
+        function initAudio() {
+            if (audioCtx) return;
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const bufferSize = audioCtx.sampleRate * 0.15; 
+                noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = (Math.random() * 2 - 1) * 0.5; 
+                }
+            } catch (e) { console.warn("Audio no disponible:", e); }
+        }
+
+        function playPaperSound() {
+            if (!audioCtx || !noiseBuffer) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const source = audioCtx.createBufferSource();
+            source.buffer = noiseBuffer;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(1200, audioCtx.currentTime);
+            filter.Q.setValueAtTime(0.5, audioCtx.currentTime);
+            
+            const gainNode = audioCtx.createGain();
+            gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            
+            source.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            source.playbackRate.value = 0.9 + Math.random() * 0.2; // Variación aleatoria
+            source.start();
+        }
+
+        document.body.addEventListener('click', initAudio, { once: true });
+        document.body.addEventListener('touchstart', initAudio, { once: true });
+
+        // --- REFERENCIAS DOM ---
+        const bookEl = document.getElementById('reader-book');
+        const bookWrapper = document.getElementById('book-wrapper');
+        const emptyState = document.getElementById('empty-state');
+        const loadingState = document.getElementById('loading-state');
+        const loadingText = document.getElementById('loading-text');
+        const loadingProgress = document.getElementById('loading-progress');
+
+        // --- OBTENER URL DEL PDF DESDE LA QUERY STRING ---
+        // Ejemplo: flipbook.html?https://tavacontigo.github.io/el_principito.pdf
+        function getPdfUrl() {
+            const q = window.location.search;
+            if (!q || q.length < 2) return '';
+            try { return decodeURIComponent(q.substring(1)); } catch (e) { return q.substring(1); }
+        }
+
+        // --- RENDERIZAR PDF (desde una URL remota) ---
+        async function renderPdf(pdfSource) {
+            // Limpiar libro previo si existe
+            if (pageFlip) {
+                pageFlip.destroy();
+                pageFlip = null;
+            }
+            bookEl.innerHTML = '';
+
+            // Mostrar estado de carga
+            emptyState.classList.add('hidden');
+            loadingState.classList.remove('hidden');
+            bookWrapper.classList.add('hidden');
+            loadingProgress.style.width = '0%';
+
+            try {
+                // Cargar el PDF desde la URL (requiere CORS habilitado en el origen)
+                const pdf = await window.pdfjsLib.getDocument(pdfSource).promise;
+
+                // Limitamos a 30 páginas para evitar cuelgues del navegador al crear múltiples Canvas
+                const MAX_PAGES = 30;
+                const numPages = Math.min(pdf.numPages, MAX_PAGES);
+
+                // Extraer el ratio (ancho/alto) de la primera página para configurar el libro 3D
+                let baseRatio = 0.7; // Fallback (1:1.4 aproximado A4)
+
+                for (let i = 1; i <= numPages; i++) {
+                    loadingText.textContent = `Renderizando página ${i} de ${numPages}...`;
+                    loadingProgress.style.width = `${(i / numPages) * 100}%`;
+
+                    const page = await pdf.getPage(i);
+
+                    // Escala x2 para que se vea nítido en pantallas de alta resolución (Retina)
+                    const viewport = page.getViewport({ scale: 1.5 });
+
+                    if (i === 1) {
+                        baseRatio = viewport.width / viewport.height;
+                    }
+
+                    // Preparar Canvas
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    // Estilos para que el canvas encaje en el contenedor del libro
+                    canvas.style.width = '100%';
+                    canvas.style.height = '100%';
+                    canvas.style.objectFit = 'contain';
+                    canvas.style.backgroundColor = 'white';
+                    canvas.style.pointerEvents = 'none'; // Evitar que el canvas intercepte los gestos
+
+                    const renderContext = {
+                        canvasContext: ctx,
+                        viewport: viewport
+                    };
+
+                    // Renderizar la página PDF en el Canvas
+                    await page.render(renderContext).promise;
+
+                    // Construir el contenedor HTML requerido por St.PageFlip
+                    const pageDiv = document.createElement('div');
+                    pageDiv.className = 'reader-page bg-white';
+
+                    // Hacer la primera y última página tipo "tapa dura"
+                    if (i === 1 || (i === numPages && numPages > 1)) {
+                        pageDiv.setAttribute('data-density', 'hard');
+                    }
+
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'page-content w-full h-full overflow-hidden relative flex items-center justify-center bg-white shadow-[inset_0_0_15px_rgba(0,0,0,0.1)]';
+
+                    // Añadir sombra dinámica en el lomo (interior del libro)
+                    const shadowDiv = document.createElement('div');
+                    const isLeftPage = (i-1) % 2 === 0;
+                    shadowDiv.className = `absolute top-0 bottom-0 w-16 ${isLeftPage ? 'right-0 bg-gradient-to-l' : 'left-0 bg-gradient-to-r'} from-black/20 to-transparent pointer-events-none z-10`;
+
+                    contentDiv.appendChild(canvas);
+                    contentDiv.appendChild(shadowDiv);
+                    pageDiv.appendChild(contentDiv);
+                    bookEl.appendChild(pageDiv);
+                }
+
+                loadingText.textContent = 'Inicializando físicas 3D...';
+
+                // Retardo mínimo para que el DOM se asiente
+                setTimeout(() => {
+                    bookWrapper.classList.remove('hidden');
+                    loadingState.classList.add('hidden');
+
+                    const isMobile = window.innerWidth < 640;
+
+                    // Configuramos PageFlip basado en el ratio real del documento PDF
+                    const baseWidth = 350;
+                    const baseHeight = baseWidth / baseRatio;
+
+                    pageFlip = new St.PageFlip(bookEl, {
+                        width: baseWidth, 
+                        height: baseHeight,
+                        size: "stretch", // Permite adaptar al tamaño de la pantalla
+                        minWidth: 260,
+                        maxWidth: 640,
+                        minHeight: 360,
+                        maxHeight: 960,
+                        maxShadowOpacity: 0.5,
+                        showCover: true,
+                        mobileScrollSupport: false,
+                        usePortrait: isMobile, // En móviles muestra una página, en PC dos
+                        flippingTime: 800
+                    });
+
+                    pageFlip.loadFromHTML(document.querySelectorAll('.reader-page'));
+
+                    // Evento al pasar página
+                    pageFlip.on('flip', () => {
+                        playPaperSound();
+                    });
+
+                    // Abrir la tapa de forma animada automáticamente si es PC
+                    if(!isMobile) {
+                        setTimeout(() => {
+                            if(pageFlip) pageFlip.flipNext();
+                        }, 500);
+                    }
+
+                }, 300);
+
+            } catch (error) {
+                console.error("Error al procesar el PDF:", error);
+                loadingText.textContent = 'Error al cargar el documento.';
+                setTimeout(() => {
+                    loadingState.classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                }, 2000);
+            }
+        }
+
+        // --- INICIALIZACIÓN: cargar el PDF indicado en la URL ---
+        (function init() {
+            const pdfUrl = getPdfUrl();
+            if (pdfUrl) {
+                renderPdf({ url: pdfUrl });
+            } else {
+                // Sin URL: se muestra el estado vacío (sin botón de subir PDF)
+                emptyState.classList.remove('hidden');
+            }
+        })();
+
+        // --- SISTEMA DE TEMA (CLARO/OSCURO) AUTOMÁTICO ---
+        const htmlElement = document.documentElement;
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            htmlElement.classList.add('dark');
+        }
+
+        // Repintar físicas al cambiar tamaño de ventana
+        window.addEventListener('resize', () => {
+            if(pageFlip) pageFlip.update();
+        });
+    </script>
+</body>
+</html>

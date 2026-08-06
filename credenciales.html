@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Credenciales | TAVA</title>
+  <meta name="description" content="Inicia sesión o regístrate en TAVA para gestionar el banco de preguntas.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --purple:#4B286A;
+      --purple-dark:#3A1F52;
+      --blue:#6BBBFD;
+      --blue-dark:#3D9BE9;
+      --lavender:#C28EE4;
+      --orange:#FBA871;
+      --bg-top:#F6F2FB;
+      --bg-bottom:#E9DDF6;
+      --card:#FFFFFF;
+      --text:#2B2036;
+      --muted:#7A6E88;
+      --border:#E6DFF0;
+    }
+    *{box-sizing:border-box;}
+    html,body{margin:0;padding:0;}
+    body{
+      font-family:'Space Grotesk','Poppins',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+      color:var(--text);
+      background:linear-gradient(160deg,var(--bg-top) 0%,var(--bg-bottom) 100%);
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+    /* Header */
+    header{
+      background:rgba(255,255,255,.92);
+      backdrop-filter:blur(6px);
+      -webkit-backdrop-filter:blur(6px);
+      box-shadow:0 2px 18px rgba(75,40,106,.10);
+      padding:14px 24px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:16px;
+      flex-wrap:wrap;
+      position:sticky;
+      top:0;
+      z-index:50;
+    }
+    header img{height:54px;width:auto;display:block;}
+    .brand{display:flex;flex-direction:column;line-height:1.15;}
+    .brand b{font-size:22px;color:var(--purple);font-weight:700;letter-spacing:.02em;}
+    .brand span{font-size:12px;color:var(--muted);}
+    /* Main / card */
+    main{flex:1;display:flex;align-items:center;justify-content:center;padding:48px 20px 60px;}
+    .auth-card{
+      background:var(--card);
+      width:100%;
+      max-width:440px;
+      border-radius:22px;
+      box-shadow:0 24px 60px rgba(75,40,106,.16);
+      padding:34px 30px;
+      border:1px solid var(--border);
+    }
+    .tabs{display:flex;background:#F3EFFA;border-radius:50px;padding:5px;margin-bottom:26px;}
+    .tab{
+      flex:1;
+      text-align:center;
+      padding:12px 10px;
+      border-radius:50px;
+      cursor:pointer;
+      border:0;
+      background:transparent;
+      font-family:inherit;
+      font-weight:600;
+      font-size:14px;
+      letter-spacing:.04em;
+      color:var(--muted);
+      transition:all .2s ease;
+    }
+    .tab:hover{color:var(--purple);}
+    .tab.active{background:var(--purple);color:#fff;box-shadow:0 6px 16px rgba(75,40,106,.28);}
+    form{display:none;flex-direction:column;gap:16px;}
+    form.active{display:flex;}
+    .field label{
+      display:block;
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      color:var(--purple);
+      margin-bottom:6px;
+    }
+    .field input,.field select{
+      width:100%;
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:12px 14px;
+      font-family:inherit;
+      font-size:14px;
+      color:var(--text);
+      outline:0;
+      background:#FCFBFE;
+      transition:border-color .2s ease, background .2s ease;
+    }
+    .field input:focus,.field select:focus{border-color:var(--blue);background:#fff;}
+    .msg{display:none;font-size:13px;line-height:1.5;border-radius:12px;padding:11px 14px;margin-bottom:6px;}
+    .msg.error{display:block;background:#FDEBEB;border:1px solid #F5A3A3;color:#A12A2A;}
+    .msg.ok{display:block;background:#E9F7EF;border:1px solid #9BD9B5;color:#22663E;}
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border:0;
+      border-radius:50px;
+      background:var(--blue);
+      color:#fff;
+      font-family:inherit;
+      font-size:15px;
+      font-weight:600;
+      letter-spacing:.05em;
+      padding:0 26px;
+      height:48px;
+      cursor:pointer;
+      text-decoration:none;
+      transition:background .2s ease, transform .1s ease;
+      box-shadow:0 8px 20px rgba(107,187,253,.35);
+      width:100%;
+    }
+    .btn:hover{background:var(--blue-dark);}
+    .btn:active{transform:translateY(1px);}
+    .btn:disabled{opacity:.6;cursor:wait;}
+    .btn.purple{background:var(--purple);color:#fff;width:auto;padding:0 22px;}
+    .btn.purple:hover{background:var(--purple-dark);}
+    .btn.outline{background:#fff;color:var(--purple);border:1px solid var(--border);box-shadow:none;width:auto;padding:0 22px;}
+    .btn.outline:hover{background:#F5F3F9;}
+    .session{display:none;text-align:center;padding:10px 0;}
+    .session.active{display:block;}
+    .avatar{
+      width:74px;
+      height:74px;
+      border-radius:50%;
+      background:#F1E7FB;
+      color:var(--purple);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:32px;
+      margin:0 auto 16px;
+      font-weight:700;
+    }
+    .session h2{font-size:22px;color:var(--purple);margin:0 0 6px;font-weight:700;}
+    .session p{color:var(--muted);font-size:14px;margin:0 0 22px;}
+    .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+    /* Footer */
+    footer{
+      text-align:center;
+      padding:22px 16px;
+      color:var(--muted);
+      font-size:13px;
+      background:rgba(255,255,255,.72);
+      border-top:1px solid var(--border);
+    }
+    footer img{height:36px;width:auto;display:inline-block;margin-bottom:6px;}
+    footer .brand-text{font-weight:700;color:var(--purple);}
+    @media(max-width:480px){
+      header img{height:44px;}
+      .auth-card{padding:26px 20px;}
+      main{padding:32px 16px 44px;}
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img src="https://static.wixstatic.com/media/c74479_503dec41257c4701b7ec5fcf7a22a2a1~mv2.png/v1/fill/w_242,h_194,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/c74479_503dec41257c4701b7ec5fcf7a22a2a1~mv2.png" alt="Logo TAVA">
+    <div class="brand">
+      <b>TAVA</b>
+      <span>Innovación que educa, información que perdura.</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="auth-card">
+      <div class="tabs">
+        <button type="button" class="tab active" data-tab="login">Inicia Sesión</button>
+        <button type="button" class="tab" data-tab="register">Regístrate</button>
+      </div>
+      <div class="msg" id="msg"></div>
+
+      <form id="login-form" class="active" novalidate>
+        <div class="field">
+          <label for="login-email">Correo electrónico</label>
+          <input type="email" id="login-email" name="email" placeholder="tudocente@colegio.edu.co" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="login-pass">Contraseña</label>
+          <input type="password" id="login-pass" name="contrasena" placeholder="••••••••" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn" id="login-btn">Entrar</button>
+      </form>
+
+      <form id="register-form" novalidate>
+        <div class="field">
+          <label for="reg-name">Nombre completo</label>
+          <input type="text" id="reg-name" name="nombre" placeholder="Ej: Carlos Mendoza" required>
+        </div>
+        <div class="field">
+          <label for="reg-email">Correo electrónico</label>
+          <input type="email" id="reg-email" name="email" placeholder="tudocente@colegio.edu.co" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="reg-pass">Contraseña</label>
+          <input type="password" id="reg-pass" name="contrasena" placeholder="Crea una contraseña" autocomplete="new-password" required>
+        </div>
+        <div class="field">
+          <label for="reg-rol">Rol</label>
+          <select id="reg-rol" name="rol">
+            <option value="docente" selected>Docente</option>
+            <option value="estudiante">Estudiante</option>
+            <option value="administrador">Administrador</option>
+          </select>
+        </div>
+        <button type="submit" class="btn" id="register-btn">Crear cuenta</button>
+      </form>
+
+      <div class="session" id="session">
+        <div class="avatar" id="avatar">?</div>
+        <h2 id="welcome">¡Bienvenido!</h2>
+        <p id="session-info"></p>
+        <div class="row">
+          <a class="btn purple" href="preguntas.html">Ir a mis preguntas</a>
+          <button type="button" class="btn outline" id="logout-btn">Cerrar sesión</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div><img src="https://static.wixstatic.com/media/c74479_503dec41257c4701b7ec5fcf7a22a2a1~mv2.png/v1/fill/w_242,h_194,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/c74479_503dec41257c4701b7ec5fcf7a22a2a1~mv2.png" alt="TAVA"></div>
+    <div><span class="brand-text">TAVA</span> · Innovación que educa, información que perdura.</div>
+  </footer>
+
+  <script>
+    (function(){
+      var API_URL = 'https://script.google.com/macros/s/AKfycbzcH-GVfB9zMTf67EdYiNr8H8Kq__HyKRwJnzDt2GU9nWVl_EQzNQeIotIIaX2jpeo_PA/exec';
+      var LS_KEY = 'tava_docente';
+
+      function callApi(fn, payload){
+        return fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ function: fn, payload: payload || {} })
+        }).then(function(res){ return res.text(); }).then(function(text){
+          var json;
+          try { json = JSON.parse(text); } catch(e){ throw new Error('Respuesta no válida del servidor.'); }
+          if(!json || !json.success){ throw new Error(json && json.error ? json.error : 'Error del servidor.'); }
+          return json.data;
+        });
+      }
+
+      function $(id){ return document.getElementById(id); }
+
+      function showMsg(msg, type){
+        var el = $('msg');
+        el.className = 'msg ' + (type === 'error' ? 'error' : 'ok');
+        el.textContent = msg || '';
+      }
+      function clearMsg(){ $('msg').className = 'msg'; }
+
+      function getDocente(){
+        try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch(e){ return null; }
+      }
+      function saveDocente(d){ localStorage.setItem(LS_KEY, JSON.stringify(d)); }
+      function clearDocente(){ localStorage.removeItem(LS_KEY); }
+
+      function switchTab(tab){
+        var tabs = document.querySelectorAll('.tab');
+        for(var i = 0; i < tabs.length; i++){
+          tabs[i].className = 'tab' + (tabs[i].getAttribute('data-tab') === tab ? ' active' : '');
+        }
+        $('login-form').className = 'form' + (tab === 'login' ? ' active' : '');
+        $('register-form').className = 'form' + (tab === 'register' ? ' active' : '');
+        clearMsg();
+      }
+
+      function initSession(){
+        var d = getDocente();
+        if(d && d.nombre){
+          $('login-form').className = 'form';
+          $('register-form').className = 'form';
+          document.querySelector('.tabs').style.display = 'none';
+          $('session').className = 'session active';
+          $('welcome').textContent = '¡Hola, ' + d.nombre + '!';
+          var info = d.email || '';
+          if(d.rol){ info += (info ? ' · ' : '') + d.rol.charAt(0).toUpperCase() + d.rol.slice(1); }
+          $('session-info').textContent = info;
+          $('avatar').textContent = (d.nombre || '?').charAt(0).toUpperCase();
+        } else {
+          $('session').className = 'session';
+          document.querySelector('.tabs').style.display = 'flex';
+        }
+      }
+
+      $('login-form').addEventListener('submit', function(e){
+        e.preventDefault();
+        var email = $('login-email').value.trim();
+        var contrasena = $('login-pass').value;
+        if(!email || !contrasena){ showMsg('Completa el correo y la contraseña.', 'error'); return; }
+        var btn = $('login-btn');
+        btn.disabled = true; btn.textContent = 'Entrando…';
+        callApi('login', { email: email, contrasena: contrasena }).then(function(data){
+          var nombre = (data && (data.nombre || data.name)) || '';
+          saveDocente({ email: email, nombre: nombre, rol: (data && data.rol) || 'docente' });
+          window.location.href = 'preguntas.html';
+        }).catch(function(err){
+          btn.disabled = false; btn.textContent = 'Entrar';
+          showMsg('No se pudo iniciar sesión: ' + (err && err.message ? err.message : 'inténtalo de nuevo.'), 'error');
+        });
+      });
+
+      $('register-form').addEventListener('submit', function(e){
+        e.preventDefault();
+        var nombre = $('reg-name').value.trim();
+        var email = $('reg-email').value.trim();
+        var contrasena = $('reg-pass').value;
+        var rol = $('reg-rol').value || 'docente';
+        if(!nombre || !email || !contrasena){ showMsg('Completa todos los campos.', 'error'); return; }
+        var btn = $('register-btn');
+        btn.disabled = true; btn.textContent = 'Creando cuenta…';
+        callApi('addUser', { email: email, contrasena: contrasena, nombre: nombre, rol: rol }).then(function(){
+          return callApi('login', { email: email, contrasena: contrasena });
+        }).then(function(data){
+          var nm = (data && (data.nombre || data.name)) || nombre;
+          saveDocente({ email: email, nombre: nm, rol: (data && data.rol) || rol });
+          window.location.href = 'preguntas.html';
+        }).catch(function(err){
+          btn.disabled = false; btn.textContent = 'Crear cuenta';
+          showMsg('No se pudo crear la cuenta: ' + (err && err.message ? err.message : 'inténtalo de nuevo.'), 'error');
+        });
+      });
+
+      $('logout-btn').addEventListener('click', function(){
+        clearDocente();
+        switchTab('login');
+        initSession();
+      });
+
+      var tabs = document.querySelectorAll('.tab');
+      for(var j = 0; j < tabs.length; j++){
+        (function(btn){
+          btn.addEventListener('click', function(){ switchTab(btn.getAttribute('data-tab')); });
+        })(tabs[j]);
+      }
+
+      initSession();
+    })();
+  </script>
+</body>
+</html>
