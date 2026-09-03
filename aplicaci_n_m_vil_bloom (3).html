@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>BLOOM — Aplicación de Cuidado Personal</title>
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          animation: {
+            'spin-slow': 'spin 12s linear infinite',
+            'pulse-soft': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Librería para generación de Código QR -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    /* Estilos transversales y correcciones para Android, iOS y Windows */
+    html, body {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+
+    /* Prevención de Auto-Zoom en inputs de iOS Safari */
+    input, select, textarea {
+      font-size: 16px !important; /* Evita que Safari en iOS haga zoom al enfocar un input */
+      touch-action: manipulation;
+    }
+
+    /* Ocultar scrollbars manteniendo el desplazamiento funcional */
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Sombras suaves de libro */
+    .book-shadow {
+      box-shadow: 0 10px 30px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Soporte para áreas seguras de pantalla (Notch / Home Indicator en iPhone y Android) */
+    .pb-safe {
+      padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+    }
+    .pt-safe {
+      padding-top: max(0.75rem, env(safe-area-inset-top));
+    }
+  </style>
+</head>
+<body class="bg-slate-100 font-sans selection:bg-rose-200">
+
+  <div id="app" class="max-w-md mx-auto min-h-screen bg-white shadow-2xl relative overflow-hidden flex flex-col">
+    <!-- Encabezado Superior -->
+    <header id="main-header" class="sticky top-0 z-40 px-4 py-3 pt-safe border-b transition-colors duration-300 flex items-center justify-between backdrop-blur-md bg-white/85 border-rose-100 text-slate-800 hidden">
+      <div class="flex items-center space-x-2">
+        <button id="btn-back" class="p-2 rounded-xl transition-all bg-rose-50 hover:bg-rose-100 text-rose-700 hidden" title="Volver al Inicio">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        </button>
+        <div class="flex items-center space-x-1.5">
+          <span class="text-xl">🌸</span>
+          <span id="logo-title" class="font-serif font-bold text-lg tracking-wide text-rose-600">BLOOM</span>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <div id="streak-badge" class="flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100/90 text-rose-800 border border-rose-200">
+          <i data-lucide="flame" class="w-3.5 h-3.5 text-amber-500 fill-amber-400 animate-pulse"></i>
+          <span id="streak-count-text">Día 1</span>
+        </div>
+
+        <button id="btn-quick-checkin" class="px-3 py-1.5 rounded-full text-xs font-medium flex items-center space-x-1 transition-all bg-rose-100/80 text-rose-800 hover:bg-rose-200/80 border border-rose-200">
+          <span>🌷</span>
+          <span class="hidden sm:inline">Actualizar</span>
+        </button>
+
+        <button id="btn-header-profile" class="p-2 rounded-full transition-all bg-rose-50 text-rose-600 hover:bg-rose-100">
+          <i data-lucide="user" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Contenido Dinámico de las Pantallas -->
+    <main id="screen-container" class="flex-1"></main>
+
+    <!-- Navegación Inferior -->
+    <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 z-40 px-3 py-2 pb-safe border-t backdrop-blur-lg flex justify-around items-center max-w-md mx-auto rounded-t-3xl shadow-lg transition-colors duration-300 bg-white/95 border-rose-100 text-slate-600 hidden">
+      <button data-screen="dashboard" class="nav-item flex flex-col items-center py-1 px-3 rounded-2xl transition-all duration-200">
+        <span class="text-lg">🏠</span>
+        <span class="text-[10px] mt-0.5 tracking-tight">Inicio</span>
+      </button>
+      <button data-screen="manual" class="nav-item flex flex-col items-center py-1 px-3 rounded-2xl transition-all duration-200">
+        <span class="text-lg">🌷</span>
+        <span class="text-[10px] mt-0.5 tracking-tight">Manual</span>
+      </button>
+
+      <button data-screen="emotional" class="nav-item flex flex-col items-center py-1 px-3 rounded-2xl transition-all duration-200">
+        <span class="text-lg">🦋</span>
+        <span class="text-[10px] mt-0.5 tracking-tight">Emociones</span>
+      </button>
+
+      <button data-screen="moon" class="nav-item flex flex-col items-center py-1 px-3 rounded-2xl transition-all duration-200">
+        <span class="text-lg">🌙</span>
+        <span class="text-[10px] mt-0.5 tracking-tight">Luna</span>
+      </button>
+      <button data-screen="profile" class="nav-item flex flex-col items-center py-1 px-3 rounded-2xl transition-all duration-200">
+        <span class="text-lg">👤</span>
+        <span class="text-[10px] mt-0.5 tracking-tight">Perfil</span>
+      </button>
+    </nav>
+
+    <!-- Modales de Notificación -->
+    <div id="toast-container" class="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 translate-y-[-10px]">
+      <div id="toast-message" class="bg-slate-800 text-white text-xs px-4 py-2.5 rounded-full shadow-lg flex items-center space-x-2">
+        <span>✨</span>
+        <span id="toast-text">Notificación</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // URL OFICIAL DE REFERENCIA DERMATOLÓGICA (AAD)
+    const EXTERNAL_INFO_URL = "https://www.aad.org/public/everyday-care/skin-care-basics";
+
+    // --- MOTOR DE AUDIO AMBIENTAL ADAPTADO PARA iOS Y ANDROID ---
+    class AmbientSoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.nodes = [];
+        this.isPlaying = false;
+        this.currentTrack = null;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioCtx();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      stop() {
+        this.nodes.forEach(n => {
+          try { n.stop ? n.stop() : n.disconnect(); } catch (e) {}
+        });
+        this.nodes = [];
+        this.isPlaying = false;
+        this.currentTrack = null;
+      }
+
+      playRain() {
+        this.init();
+        this.stop();
+        const bufferSize = this.ctx.sampleRate * 2;
+        const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1;
+        }
+        const whiteNoise = this.ctx.createBufferSource();
+        whiteNoise.buffer = noiseBuffer;
+        whiteNoise.loop = true;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 750;
+
+        const gainNode = this.ctx.createGain();
+        gainNode.gain.setValueAtTime(0.12, this.ctx.currentTime);
+
+        whiteNoise.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(this.ctx.destination);
+
+        whiteNoise.start();
+        this.nodes.push(whiteNoise, filter, gainNode);
+        this.isPlaying = true;
+        this.currentTrack = 'rain';
+      }
+
+      playCalmDrone() {
+        this.init();
+        this.stop();
+        const frequencies = [220, 277.18, 329.63, 440];
+        const gainNode = this.ctx.createGain();
+        gainNode.gain.setValueAtTime(0.07, this.ctx.currentTime);
+
+        frequencies.forEach(f => {
+          const osc = this.ctx.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(f, this.ctx.currentTime);
+          osc.connect(gainNode);
+          osc.start();
+          this.nodes.push(osc);
+        });
+
+        gainNode.connect(this.ctx.destination);
+        this.nodes.push(gainNode);
+        this.isPlaying = true;
+        this.currentTrack = 'drone';
+      }
+
+      playSingingBowl() {
+        this.init();
+        this.stop();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(432, this.ctx.currentTime);
+
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 6);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        this.nodes.push(osc, gain);
+        this.isPlaying = true;
+        this.currentTrack = 'bowl';
+      }
+    }
+
+    const soundEngine = new AmbientSoundEngine();
+
+    // Desbloquear contexto de audio en el primer toque (Requerido en iOS Safari / Chrome Android)
+    document.addEventListener('touchstart', () => { if (soundEngine.ctx) soundEngine.init(); }, { once: true });
+    document.addEventListener('click', () => { if (soundEngine.ctx) soundEngine.init(); }, { once: true });
+
+    // --- BASE DE DATOS DE CANCIONES DE SPOTIFY Y PODCASTS DE YOUTUBE ---
+    const SPOTIFY_PLAYLISTS = [
+      { id: 1, title: 'Acoustic Calm & Chill 🎸', artist: 'Spotify Curated', desc: 'Melodías acústicas suaves y tranquilizadoras para relajarte.', link: 'https://open.spotify.com/search/acoustic%20calm' },
+      { id: 2, title: 'Deep Focus & Lo-Fi Beats 🎧', artist: 'Lo-Fi Girl / Spotify', desc: 'Ritmos tranquilos e inspiradores ideales para estudiar o concentrarte.', link: 'https://open.spotify.com/search/lofi%20beats' },
+      { id: 3, title: 'Self-Love & Positive Vibes ✨', artist: 'Acoustic Pop', desc: 'Canciones motivacionales para elevar el ánimo y quererte más.', link: 'https://open.spotify.com/search/self%20love%20vibes' },
+      { id: 4, title: 'Peaceful Piano & Healing 432Hz 🎹', artist: 'Healing Piano', desc: 'Piano instrumental sereno para meditar y calmar la mente.', link: 'https://open.spotify.com/search/peaceful%20piano' }
+    ];
+
+    const YOUTUBE_PODCASTS = [
+      { id: 1, title: 'Entiende Tu Mente 🧠', channel: 'Spotify / YouTube', desc: 'El podcast de psicología más escuchado en español para entender tus emociones.', link: 'https://www.youtube.com/results?search_query=entiende+tu+mente+podcast' },
+      { id: 2, title: 'Se Regalan Dudas 💬', channel: 'Ashley Frangie y Lety Sahagún', desc: 'Un espacio seguro para cuestionar, sanar y hablar sobre amor propio.', link: 'https://www.youtube.com/results?search_query=se+regalan+dudas+podcast' },
+      { id: 3, title: 'Meditación Guiada: Soltar Estrés 🧘', channel: 'Mindfulness en Español', desc: 'Sesión guiada de 10 minutos para liberar la tensión diaria.', link: 'https://www.youtube.com/results?search_query=meditacion+guiada+soltar+estres' },
+      { id: 4, title: 'El Podcast de Cristina Mitre 🧴', channel: 'Cristina Mitre', desc: 'Episodios sobre cuidado de la piel, salud, nutrición y bienestar integral.', link: 'https://www.youtube.com/results?search_query=el+podcast+de+cristina+mitre' }
+    ];
+
+    // --- BASE DE DATOS DE FASES LUNARES Y EMOCIONES ---
+    const MOON_PHASES = [
+      { id: 'nueva', name: 'Luna Nueva', emoji: '🌑', desc: 'Renovación y siembra de intenciones amables.', emotionGuidance: 'Energía quieta e introspectiva. Es normal sentir menor energía física.', focus: 'Hidratación profunda, limpieza suave y descanso reparador.' },
+      { id: 'creciente', name: 'Creciente', emoji: '🌒', desc: 'Impulso emergente y primeros brotes de motivación.', emotionGuidance: 'Momento favorable para proyectar e iniciar pequeñas rutinas de cuidado.', focus: 'Nutrición rica en antioxidantes y mascarillas capilares.' },
+      { id: 'cuarto_creciente', name: 'Cuarto Creciente', emoji: '🌓', desc: 'Construcción constante y toma de decisiones.', emotionGuidance: 'Aparecen desafíos; la respiración y el diario ayudan a mantener la serenidad.', focus: 'Exfoliación suave de piel y tónicos estimulantes para la raíz.' },
+      { id: 'gibosa_creciente', name: 'Gibosa Creciente', emoji: '🌔', desc: 'Refinamiento, paciencia y cultivo de detalles.', emotionGuidance: 'Confía en tu ritmo natural sin exigencias desmedidas.', focus: 'Acondicionamiento profundo y sueros reconfortantes.' },
+      { id: 'llena', name: 'Luna Llena', emoji: '🌕', desc: 'Culminación, brillo, intuición y vitalidad en su cima.', emotionGuidance: 'Emociones intensas o expansivas. Busca pausas para procesar tus sentimientos.', focus: 'Skincare luminoso, masajes faciales y masajes en cuero cabelludo.' },
+      { id: 'gibosa_menguante', name: 'Gibosa Menguante', emoji: '🌖', desc: 'Gratitud, asimilación y compartir el aprendizaje.', emotionGuidance: 'Reconoce tus logros diarios, por pequeños que parezcan.', focus: 'Reparación de la barrera cutánea e hidratación restauradora.' },
+      { id: 'cuarto_menguante', name: 'Cuarto Menguante', emoji: '🌗', desc: 'Liberación de cargas, perdón y depuración suave.', emotionGuidance: 'Suelta la autocrítica y la necesidad de control absoluto.', focus: 'Detox capilar sutil y baño/ducha relajante de noche.' },
+      { id: 'menguante', name: 'Menguante', emoji: '🌘', desc: 'Quietud, cobijo, descanso profundo y asimilación.', emotionGuidance: 'Pertenencia y descanso. Permítete desacelerar sin culpa.', focus: 'Aceites nutritivos, masajes nocturnos y sueño reparador.' }
+    ];
+
+    const EMOTION_TYPES = [
+      { id: 'serene', emoji: '🌸', name: 'Serena / En Paz', desc: 'Estado de equilibrio mental y baja agitación. La respiración fluye sin tensión.', recommendation: 'Aprovecha este estado para realizar tu rutina con presencia consciente.' },
+      { id: 'happy', emoji: '🌻', name: 'Feliz / Entusiasmada', desc: 'Sensación de calidez y gratitud interior. Elevada energía positiva.', recommendation: 'Comparte tu alegría o anota este momento en tu diario de recuerdos.' },
+      { id: 'motivated', emoji: '⚡', name: 'Motivada / Con Vitalidad', desc: 'Impulso claro para actuar y probar nuevos hábitos o proyectos.', recommendation: 'Canaliza esta energía en movimiento suave o estiramientos disfrutables.' },
+      { id: 'stressed', emoji: '🌊', name: 'Estresada / Abrumada', desc: 'Mente acelerada o tensión acumulada en hombros y cuello.', recommendation: 'Practica la respiración 4-7-8 y escucha sonidos de lluvia antes de dormir.' },
+      { id: 'tired', emoji: '🔋', name: 'Cansada / Exhausta', desc: 'Energía corporal baja. Necesidad de cobijo y ritmo pausado.', recommendation: 'Reduce tu lista de pendientes al mínimo. Regálate una rutina ultra simple.' },
+      { id: 'fluctuating', emoji: '🌤️', name: 'Fluctuante / Sensible', desc: 'Emociones cambiantes a lo largo del día. Alta receptividad.', recommendation: 'Abraza el cambio sin juzgarlo. Tu cuerpo está procesando vivencias.' }
+    ];
+
+    const SEPTEMBER_MOON_DATA = {
+      1: MOON_PHASES[5], 2: MOON_PHASES[5], 3: MOON_PHASES[6], 4: MOON_PHASES[6], 5: MOON_PHASES[6],
+      6: MOON_PHASES[7], 7: MOON_PHASES[7], 8: MOON_PHASES[7], 9: MOON_PHASES[0], 10: MOON_PHASES[0],
+      11: MOON_PHASES[1], 12: MOON_PHASES[1], 13: MOON_PHASES[1], 14: MOON_PHASES[2], 15: MOON_PHASES[2],
+      16: MOON_PHASES[2], 17: MOON_PHASES[3], 18: MOON_PHASES[3], 19: MOON_PHASES[3], 20: MOON_PHASES[4],
+      21: MOON_PHASES[4], 22: MOON_PHASES[4], 23: MOON_PHASES[5], 24: MOON_PHASES[5], 25: MOON_PHASES[5],
+      26: MOON_PHASES[6], 27: MOON_PHASES[6], 28: MOON_PHASES[7], 29: MOON_PHASES[7], 30: MOON_PHASES[0]
+    };
+
+    const ASSESSMENT_QUESTIONS = [
+      {
+        id: 1, category: 'Cabello 🌿', question: '¿Cómo describirías tu cabello?', subtitle: 'Selecciona la opción que mejor coincida con tu estructura capilar natural.', type: 'single',
+        tip: '💡 Tip Bloom: El cabello liso requiere fórmulas ligeras para no aportar peso; los patrones rizados u ondulados prosperan con aceites nutritivos y sellado de hidratación.',
+        options: [
+          { label: 'Liso', icon: '✨', desc: 'Hebras sedosas, finas o densas sin ondas' },
+          { label: 'Ondulado', icon: '〰️', desc: 'Ondas suaves en forma de S y rizos sueltos' },
+          { label: 'Rizado', icon: '🌀', desc: 'Rizos definidos, bucles o textura elástica' },
+          { label: 'Mixto / Combinado', icon: '🌿', desc: 'Diferentes texturas a lo largo de tu cabello' },
+          { label: 'Prefiero no decirlo', icon: '🌷', desc: 'Mantener sugerencias generales y flexibles' }
+        ]
+      },
+      {
+        id: 2, category: 'Rutina Capilar 💆‍♀️', question: '¿En qué te gustaría enfocarte o mejorar en tu cabello?', subtitle: 'Elige todas las áreas que resuenen contigo.', type: 'multi',
+        tip: '💡 Tip Dermatológico: Un cuero cabelludo sano es la base del crecimiento fuerte. Masajear la raíz 3 minutos al día activa la microcirculación capilar.',
+        options: [
+          { label: 'Hidratación y Humectación', icon: '💧', desc: 'Nutrir puntas secas y sellar la humedad' },
+          { label: 'Definición de Rizos/Ondas', icon: '✨', desc: 'Mejorar el rebote natural de tus ondas' },
+          { label: 'Brillo y Suavidad', icon: '🌟', desc: 'Glosado suave y control gentil del frizz' },
+          { label: 'Cuidado del Cuero Cabelludo', icon: '🌱', desc: 'Calmar, equilibrar y vitalizar la raíz' },
+          { label: 'Mantener la Salud General', icon: '🌿', desc: 'Fuerza simple y mantenimiento constante' },
+          { label: 'Sin Necesidad Específica', icon: '🤍', desc: 'Solo un cuidado tierno y sin complicaciones' }
+        ]
+      },
+      {
+        id: 3, category: 'Cuidado de la Piel 🌸', question: '¿Qué tipo de enfoque para la piel te interesa más?', subtitle: 'Rituales de cuidado respaldados por pautas dermatológicas de la AAD.', type: 'multi',
+        tip: '💡 Tip AAD: El 80% del envejecimiento prematuro se previene con el uso constante de protector solar de amplio espectro FPS 30+ todos los días.',
+        options: [
+          { label: 'Hidratación y Resplandor (Glow)', icon: '✨', desc: 'Piel luminosa, calmada y profundamente hidratada' },
+          { label: 'Limpieza Suave', icon: '🧼', desc: 'Fórmulas delicadas que respetan el equilibrio natural' },
+          { label: 'Protección Solar (FPS 30+)', icon: '☀️', desc: 'Protección solar diaria cómoda y agradable' },
+          { label: 'Mantener una Rutina Simple', icon: '🌱', desc: 'Pasos mínimos con máxima tranquilidad' },
+          { label: 'Entender Mi Tipo de Piel', icon: '🔍', desc: 'Aprender lo que hace feliz a tu piel' },
+          { label: 'Otro', icon: '🌷', desc: 'Ánimo diario adaptado y respetuoso' }
+        ]
+      },
+      {
+        id: 4, category: 'Tiempo de Autocuidado 🧴', question: '¿Cuánto tiempo te gustaría dedicar a tu cuidado personal diario?', subtitle: 'No hay respuestas incorrectas: encuentra el ritmo para tu vida actual.', type: 'single',
+        tip: '💡 Tip Sin Culpa: No necesitas horas para cuidarte. 5 minutos dedicados a respirar e hidratarte conscientemente hacen una gran diferencia.',
+        options: [
+          { label: '5–10 minutos', icon: '⏱️', desc: 'Micro-momentos rápidos de paz' },
+          { label: '10–20 minutos', icon: '⏳', desc: 'Una pausa diaria cómoda y reconfortante' },
+          { label: '20–30 minutos', icon: '🕯️', desc: 'Un ritual inmersivo y sin prisas' },
+          { label: 'Cuando encuentre un momento', icon: '🎈', desc: 'Momentos flexibles en días ajetreados' },
+          { label: 'Solo rutinas ultra-simples', icon: '🍃', desc: 'Bajo esfuerzo y consistencia pacífica' }
+        ]
+      },
+      {
+        id: 5, category: 'Hábitos Diarios 🌱', question: '¿Qué hábitos te gustaría incorporar más en tus días?', subtitle: 'Prácticas amables de apoyo para tu cuerpo y mente.', type: 'multi',
+        tip: '💡 Tip de Cronobiología: Mantener horarios estables de sueño ayuda a restaurar la piel a nivel celular durante la fase REM.',
+        options: [
+          { label: 'Mejor Calidad de Sueño', icon: '🌙', desc: 'Rutinas suaves para desconectar de noche' },
+          { label: 'Tomar Suficiente Agua', icon: '🥛', desc: 'Chequeos de hidratación nutritiva' },
+          { label: 'Movimiento Suave y Actividad Física', icon: '🧘', desc: 'Estiramientos, paseos y conexión corporal' },
+          { label: 'Tomar Pausas de Descanso', icon: '🛋️', desc: 'Pausar sin sentir culpa' },
+          { label: 'Mejor Organización del Tiempo', icon: '📅', desc: 'Estructura tierna para días más serenos' },
+          { label: 'Autocuidado Diario Constante', icon: '🌸', desc: 'Estar presente para ti cada día' }
+        ]
+      },
+      {
+        id: 6, category: 'Estado Emocional 💗', question: '¿Cómo te has sentido últimamente?', subtitle: 'Honrando tu etapa presente sin ningún juicio.', type: 'single',
+        tip: '💡 Tip de Salud Mental: Nombrar tus emociones desactiva la reactividad de la amígdala cerebral y promueve el autocontrol pacífico.',
+        options: [
+          { label: 'En Paz y Tranquila/o', icon: '🕊️', desc: 'Sentimiento de equilibrio y calma' },
+          { label: 'Feliz y Contenta/o', icon: '🌻', desc: 'Llenitud, gratitud y positividad' },
+          { label: 'Motivada/o y Con Energía', icon: '⚡', desc: 'Lista/o para florecer y probar cosas nuevas' },
+          { label: 'Estresada/o u Abrumada/o', icon: '🌊', desc: 'Cargando pensamientos o presión pesada' },
+          { label: 'Cansada/o o Exhausta/o', icon: '🔋', desc: 'Con necesidad de descanso profundo y cobijo' },
+          { label: 'Emociones Fluctantes', icon: '🌤️', desc: 'Cambiando día a día o momento a momento' },
+          { label: 'Prefiero No Responder', icon: '💜', desc: 'Mantener las herramientas emocionales a la mano' }
+        ]
+      },
+      {
+        id: 7, category: 'Bienestar Emocional 🦋', question: 'En un día difícil, ¿qué te ayuda habitualmente a reconfortarte?', subtitle: 'Selecciona las actividades de refugio que sanan tu espíritu.', type: 'multi',
+        tip: '💡 Tip de Autorregulación: La música lenta (60-80 BPM) ayuda a sincronizar tu ritmo cardíaco promoviendo la calma instantánea.',
+        options: [
+          { label: 'Escuchar Música', icon: '🎧', desc: 'Melodías suaves o ritmos que elevan el ánimo' },
+          { label: 'Hablar con Alguien', icon: '💬', desc: 'Compartir lo que sientes con un corazón confiable' },
+          { label: 'Pasar Tiempo A Solas', icon: '🏡', desc: 'Espacio silencioso para recargar suavemente' },
+          { label: 'Escribir / Diario de Reflexión', icon: '📝', desc: 'Liberar tus pensamientos sobre el papel' },
+          { label: 'Bailar o Mover el Cuerpo', icon: '💃', desc: 'Sacudir y soltar la energía acumulada' },
+          { label: 'Ver una Serie o Película', icon: '🎬', desc: 'Entretenimiento relajante y acogedor' },
+          { label: 'Descansar y Dormir', icon: '🛏️', desc: 'Rendirse a la quietud confortante' }
+        ]
+      },
+      {
+        id: 8, category: 'Relación Contigo Misma/o 🌷', question: '¿Qué te gustaría cultivar dentro de ti?', subtitle: 'Plantando semillas para tu crecimiento personal.', type: 'multi',
+        tip: '💡 Tip de Amor Propio: Hablarte a ti misma con la misma amabilidad con la que le hablarías a tu mejor amiga transforma tu paz interior.',
+        options: [
+          { label: 'Confianza en Mí Misma/o', icon: '👑', desc: 'Creer en tu valor y en tus decisiones' },
+          { label: 'Autoaceptación', icon: '🌷', desc: 'Abrazar cada parte de tu historia' },
+          { label: 'Disciplina en el Cuidado Personal', icon: '🌱', desc: 'Hacer tiempo para ti con regularidad' },
+          { label: 'Paz Interior y Calma', icon: '🕊️', desc: 'Silenciar el sobrepensamiento y el ruido' },
+          { label: 'Motivación', icon: '✨', desc: 'Encender la alegría y la chispa creativa' },
+          { label: 'Reconocer y Honrar Mis Emociones', icon: '💗', desc: 'Escuchar profundamente a tu corazón' },
+          { label: 'Sentirme Cómoda/o Siendo Yo Misma/o', icon: '🌈', desc: 'Vivir de forma auténtica y libre' }
+        ]
+      },
+      {
+        id: 9, category: 'Audio y Medios 🎧', question: '¿Qué tipo de contenido de audio disfrutas más?', subtitle: 'Sonidos que acompañan tus momentos de autocuidado.', type: 'multi',
+        tip: '💡 Tip Sonoro: Las frecuencias de 432 Hz estimulan ondas cerebrales alfa que facilitan el descanso y la meditación profunda.',
+        options: [
+          { label: 'Música Calmada y Ambiental', icon: '🎹', desc: 'Lo-fi, paisajes sonoros ambientales y naturaleza' },
+          { label: 'Listas de Reproducción Motivacionales / Alegres', icon: '☀️', desc: 'Ritmos inspiradores para momentos activos' },
+          { label: 'Música para Bailar y Recargar Energía', icon: '💃', desc: 'Ritmos divertidos para subir el ánimo' },
+          { label: 'Podcasts Sobre Crecimiento Personal', icon: '🎙️', desc: 'Conversaciones sobre bienestar y amor propio' },
+          { label: 'Meditaciones Guiadas y Sonidos Relajantes', icon: '🔔', desc: 'Mindfulness y audio para descansar' },
+          { label: 'Una Combinación de Todo', icon: '🎶', desc: 'Una mezcla rica según el estado de ánimo' }
+        ]
+      },
+      {
+        id: 10, category: 'La Experiencia Bloom 🌙', question: '¿Qué es lo que más te ilusiona encontrar en BLOOM?', subtitle: 'Ayúdanos a destacar lo que más te importa.', type: 'multi',
+        tip: '💡 Tip Final: Recuerda que Bloom es un refugio interactivo. Puedes cambiar tu estado o ajustar tus hábitos en cualquier momento.',
+        options: [
+          { label: 'Rutinas Personalizadas de Autocuidado', icon: '📋', desc: 'Guías diarias a tu medida' },
+          { label: 'Guía de Cabello y Piel', icon: '🧴', desc: 'Consejos nutritivos de cuidado físico' },
+          { label: 'Herramientas de Bienestar Emocional', icon: '🦋', desc: 'Respiración, diario personal y cobijo' },
+          { label: 'Listas de Música y Podcasts Curados', icon: '🎧', desc: 'Paisajes sonoros para tu jornada' },
+          { label: 'Reflexiones y Consejos del Calendario Lunar', icon: '🌙', desc: 'Wisdom lunar y cuidado en sintonía' },
+          { label: 'Un Poco de Todo 🌸', icon: '🌸', desc: 'La experiencia holística completa' }
+        ]
+      }
+    ];
+
+    // --- ESTADO GLOBAL DE LA APLICACIÓN (INICIA EN DÍA 1) ---
+    const state = {
+      currentScreen: 'onboarding',
+      assessmentStep: 0,
+      userName: '',
+      answers: { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [], 9: [], 10: [] },
+      streak: { count: 1, lastLoginDate: '2026-09-03', totalLogins: 1 },
+      habits: [
+        { id: 'water', name: 'Meta de Agua', icon: '💧', count: 4, target: 8 },
+        { id: 'rest', name: 'Pausa de Descanso', icon: '🛋️', completed: true },
+        { id: 'skincare', name: 'Momento de Piel', icon: '🧴', completed: true },
+        { id: 'haircare', name: 'Cuidado Capilar', icon: '💆‍♀️', completed: false },
+        { id: 'music', name: 'Escuchar Música', icon: '🎧', completed: true },
+        { id: 'me_time', name: 'Tiempo Para Mí', icon: '🌸', completed: false },
+        { id: 'sleep', name: 'Descanso Reparador', icon: '🌙', completed: true }
+      ],
+      selectedEmotionDate: 3,
+      moodCalendar: {
+        1: { emoji: '🌸', typeId: 'serene', note: 'Empecé el mes con mucha calma interior.' }
+      },
+      journalEntries: [
+        { id: 1, date: '3 de Septiembre, 2026 — 11:00 AM', text: 'Dar pequeños pasos hoy se siente amable y correcto. No tengo que apresurarme.', mood: '🌸 Serena' }
+      ],
+      selectedMoonDate: 3,
+      breathingActive: false,
+      breathingPhase: 'Inhalar',
+      breathingTimer: 4,
+      breathingInterval: null,
+      showReferencesModal: false,
+      manualActiveTab: 'cover' // 'cover', 'cap1', 'cap2', 'cap3', 'cap4'
+    };
+
+    // --- PERSISTENCIA Y CARGA INICIAL ---
+    function initApp() {
+      try {
+        const saved = localStorage.getItem('bloom_user_profile_es_v4');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.userName) state.userName = parsed.userName;
+          if (parsed.answers) state.answers = parsed.answers;
+          if (parsed.moodCalendar) state.moodCalendar = parsed.moodCalendar;
+          if (parsed.streak) state.streak = parsed.streak;
+        } else {
+          state.streak = { count: 1, lastLoginDate: '2026-09-03', totalLogins: 1 };
+        }
+      } catch (e) {}
+
+      setupGlobalEvents();
+      render();
+    }
+
+    function saveProfile() {
+      try {
+        const data = {
+          userName: state.userName || 'Amiga Bloom',
+          answers: state.answers,
+          streak: state.streak,
+          moodCalendar: state.moodCalendar,
+          updatedAt: new Date().toISOString()
+        };
+        localStorage.setItem('bloom_user_profile_es_v4', JSON.stringify(data));
+      } catch (e) {}
+    }
+
+    function showToast(text) {
+      const el = document.getElementById('toast-container');
+      const textEl = document.getElementById('toast-text');
+      if (el && textEl) {
+        textEl.innerText = text;
+        el.classList.remove('opacity-0', 'translate-y-[-10px]');
+        el.classList.add('opacity-100', 'translate-y-0');
+        setTimeout(() => {
+          el.classList.remove('opacity-100', 'translate-y-0');
+          el.classList.add('opacity-0', 'translate-y-[-10px]');
+        }, 2800);
+      }
+    }
+
+    function navigateTo(screen) {
+      state.currentScreen = screen;
+      render();
+      window.scrollTo(0, 0);
+
+      setTimeout(generateQRCodes, 100);
+    }
+
+    function setupGlobalEvents() {
+      document.getElementById('btn-back').addEventListener('click', () => navigateTo('dashboard'));
+      document.getElementById('btn-header-profile').addEventListener('click', () => navigateTo('profile'));
+      document.getElementById('btn-quick-checkin').addEventListener('click', () => {
+        navigateTo('emotional');
+        showToast('¡Selecciona tu emoción del día en el calendario!');
+      });
+
+      document.querySelectorAll('.nav-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const targetScreen = btn.getAttribute('data-screen');
+          navigateTo(targetScreen);
+        });
+      });
+    }
+
+    function startAssessmentWithName() {
+      const input = document.getElementById('initial-name-input');
+      const enteredName = input ? input.value.trim() : '';
+      state.userName = enteredName || 'Amiga Bloom';
+      saveProfile();
+      state.assessmentStep = 0;
+      navigateTo('assessment');
+    }
+
+    // --- GENERADOR DE CÓDIGOS QR QUE REDIRIGEN A LA WEB OFICIAL ---
+    function generateQRCodes() {
+      const refQrContainer = document.getElementById('qr-code-references');
+      if (refQrContainer && window.QRCode) {
+        refQrContainer.innerHTML = '';
+        new QRCode(refQrContainer, {
+          text: EXTERNAL_INFO_URL,
+          width: 96,
+          height: 96,
+          colorDark: "#6b21a8",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      }
+
+      const manualQrContainer = document.getElementById('qr-code-manual');
+      if (manualQrContainer && window.QRCode) {
+        manualQrContainer.innerHTML = '';
+        new QRCode(manualQrContainer, {
+          text: EXTERNAL_INFO_URL,
+          width: 80,
+          height: 80,
+          colorDark: "#881337",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      }
+    }
+
+    // --- MOTOR DE RENDERIZADO ---
+    function render() {
+      const container = document.getElementById('screen-container');
+      const header = document.getElementById('main-header');
+      const nav = document.getElementById('bottom-nav');
+      const isMoon = state.currentScreen === 'moon';
+
+      if (['onboarding', 'assessment', 'processing'].includes(state.currentScreen)) {
+        header.classList.add('hidden');
+        nav.classList.add('hidden');
+      } else {
+        header.classList.remove('hidden');
+        nav.classList.remove('hidden');
+
+        const btnBack = document.getElementById('btn-back');
+        if (state.currentScreen !== 'dashboard') {
+          btnBack.classList.remove('hidden');
+        } else {
+          btnBack.classList.add('hidden');
+        }
+
+        if (isMoon) {
+          header.className = "sticky top-0 z-40 px-4 py-3 pt-safe border-b transition-colors duration-300 flex items-center justify-between backdrop-blur-md bg-[#1A1733]/90 border-purple-900/40 text-purple-100";
+          nav.className = "fixed bottom-0 left-0 right-0 z-40 px-3 py-2 pb-safe border-t backdrop-blur-lg flex justify-around items-center max-w-md mx-auto rounded-t-3xl shadow-lg transition-colors duration-300 bg-[#1E1B3A]/95 border-purple-900/50 text-purple-300";
+          document.getElementById('logo-title').className = "font-serif font-bold text-lg tracking-wide text-purple-200";
+          document.getElementById('streak-badge').className = "flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-900/80 text-amber-300 border border-purple-700";
+          document.getElementById('btn-quick-checkin').className = "px-3 py-1.5 rounded-full text-xs font-medium flex items-center space-x-1 transition-all bg-purple-800/60 text-purple-200 hover:bg-purple-700/70 border border-purple-500/30";
+          btnBack.className = "p-2 rounded-xl transition-all bg-purple-900/50 hover:bg-purple-800/60 text-purple-200";
+        } else {
+          header.className = "sticky top-0 z-40 px-4 py-3 pt-safe border-b transition-colors duration-300 flex items-center justify-between backdrop-blur-md bg-white/85 border-rose-100 text-slate-800";
+          nav.className = "fixed bottom-0 left-0 right-0 z-40 px-3 py-2 pb-safe border-t backdrop-blur-lg flex justify-around items-center max-w-md mx-auto rounded-t-3xl shadow-lg transition-colors duration-300 bg-white/95 border-rose-100 text-slate-600";
+          document.getElementById('logo-title').className = "font-serif font-bold text-lg tracking-wide text-rose-600";
+          document.getElementById('streak-badge').className = "flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100/90 text-rose-800 border border-rose-200";
+          document.getElementById('btn-quick-checkin').className = "px-3 py-1.5 rounded-full text-xs font-medium flex items-center space-x-1 transition-all bg-rose-100/80 text-rose-800 hover:bg-rose-200/80 border border-rose-200";
+          btnBack.className = "p-2 rounded-xl transition-all bg-rose-50 hover:bg-rose-100 text-rose-700";
+        }
+
+        document.getElementById('streak-count-text').innerText = `Día ${state.streak.count}`;
+
+        document.querySelectorAll('.nav-item').forEach(btn => {
+          const s = btn.getAttribute('data-screen');
+          if (s === state.currentScreen) {
+            btn.className = `nav-item flex flex-col items-center py-1 px-3 rounded-2xl transition-all duration-200 ${
+              isMoon ? 'bg-purple-800/60 text-purple-100 font-semibold scale-105' : 'bg-rose-100/80 text-rose-700 font-semibold scale-105'
+            }`;
+          } else {
+            btn.className = 'nav-item flex flex-col items-center py-1 px-3 rounded-2xl transition-all duration-200 hover:opacity-80';
+          }
+        });
+      }
+
+      switch (state.currentScreen) {
+        case 'onboarding': container.innerHTML = renderOnboarding(); break;
+        case 'assessment': container.innerHTML = renderAssessment(); break;
+        case 'processing': container.innerHTML = renderProcessing(); break;
+        case 'manual': container.innerHTML = renderManualBook(); break;
+        case 'dashboard': container.innerHTML = renderDashboard(); break;
+        case 'physical': container.innerHTML = renderPhysical(); break;
+        case 'emotional': container.innerHTML = renderEmotional(); break;
+        case 'audio': container.innerHTML = renderAudio(); break;
+        case 'moon': container.innerHTML = renderMoonCalendar(); break;
+        case 'habits': container.innerHTML = renderHabits(); break;
+        case 'profile': container.innerHTML = renderProfile(); break;
+      }
+
+      lucide.createIcons();
+    }
+
+    // --- PANTALLAS Y COMPONENTES ---
+
+    function renderOnboarding() {
+      return `
+        <div class="min-h-screen bg-gradient-to-b from-rose-50 via-purple-50/50 to-emerald-50/30 flex flex-col justify-between p-6 max-w-md mx-auto text-slate-800 relative overflow-hidden">
+          <div class="pt-2 text-center flex flex-col items-center z-10">
+            <div class="w-28 h-28 rounded-3xl bg-rose-100 flex items-center justify-center text-5xl shadow-xl border-2 border-white mb-2">
+              🌸
+            </div>
+            <h1 class="text-3xl font-serif font-bold text-slate-800 tracking-tight flex items-center gap-1.5 mt-1">
+              BLOOM <span class="text-xl animate-pulse">🌸</span>
+            </h1>
+            <p class="mt-1 text-xs text-slate-600 max-w-xs font-light leading-relaxed">
+              “Un espacio seguro para cuidarte, conocerte y florecer.”
+            </p>
+          </div>
+
+          <div class="my-auto z-10 bg-white/80 backdrop-blur-md rounded-3xl p-5 border border-white shadow-lg text-left">
+            <div class="flex items-center space-x-2 mb-2">
+              <span class="text-lg">✨</span>
+              <h2 class="font-serif text-sm font-bold text-slate-800">¿Cómo deseas que te llamemos?</h2>
+            </div>
+            <p class="text-[11px] text-slate-500 mb-3 font-light">
+              Ingresa tu nombre para personalizar tu manual y tu experiencia de bienestar desde el primer paso.
+            </p>
+
+            <div class="relative">
+              <input id="initial-name-input" type="text" placeholder="Ej: Valentina, Sofía..." value="${state.userName !== 'Amiga Bloom' ? state.userName : ''}" class="w-full px-4 py-3 bg-slate-50 rounded-2xl border border-rose-200 focus:outline-none focus:ring-2 focus:ring-rose-300 text-xs font-medium text-slate-800 placeholder-slate-400" />
+            </div>
+          </div>
+
+          <div class="space-y-2.5 z-10 pb-4">
+            <button onclick="startAssessmentWithName()" class="w-full py-3.5 bg-gradient-to-r from-rose-400 via-pink-400 to-purple-400 hover:from-rose-500 hover:to-purple-500 text-white font-medium rounded-2xl shadow-md shadow-rose-200/80 transition-all duration-300 transform active:scale-95 flex items-center justify-center space-x-2 text-sm">
+              <span>Comenzar Cuestionario</span>
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+
+            <button onclick="if(!state.userName || state.userName==='Amiga Bloom'){ const inp=document.getElementById('initial-name-input'); state.userName = inp && inp.value.trim() ? inp.value.trim() : 'Amiga Bloom'; saveProfile(); } navigateTo('manual');" class="w-full py-3 bg-white/80 hover:bg-white text-slate-700 font-medium rounded-2xl border border-rose-200/80 shadow-sm transition-all text-xs flex items-center justify-center space-x-1.5">
+              <span>🌷</span>
+              <span>Ir Directo a Mi Manual</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderAssessment() {
+      const q = ASSESSMENT_QUESTIONS[state.assessmentStep];
+      const progress = Math.round(((state.assessmentStep + 1) / ASSESSMENT_QUESTIONS.length) * 100);
+      const selected = state.answers[q.id] || [];
+      const isValid = selected.length > 0;
+      const displayName = state.userName || 'Amiga Bloom';
+
+      return `
+        <div class="min-h-screen bg-gradient-to-b from-rose-50/60 via-purple-50/40 to-slate-50 flex flex-col justify-between p-5 max-w-md mx-auto text-slate-800">
+          <div class="pt-2 pb-3">
+            <div class="flex justify-between items-center text-xs font-medium text-slate-500 mb-2">
+              <span class="text-rose-600 font-serif font-semibold">Hola, ${displayName} • Paso ${q.id} de 10</span>
+              <span class="bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full text-[10px] font-semibold">${progress}%</span>
+            </div>
+            <div class="w-full bg-rose-100/60 rounded-full h-2.5 overflow-hidden p-0.5 border border-rose-200/40">
+              <div class="bg-gradient-to-r from-rose-400 via-pink-400 to-purple-400 h-full rounded-full transition-all duration-500" style="width: ${progress}%"></div>
+            </div>
+          </div>
+
+          <div class="my-auto py-2">
+            <span class="inline-block px-3 py-1 rounded-full bg-rose-100/80 text-rose-700 text-xs font-medium mb-2">${q.category}</span>
+            <h2 class="text-2xl font-serif font-bold text-slate-800 leading-snug">${q.question}</h2>
+            <p class="text-xs text-slate-500 mt-1 font-light">${q.subtitle}</p>
+
+            <div class="mt-3 p-3 bg-purple-50/80 border border-purple-100 rounded-2xl text-[11px] text-purple-900 leading-relaxed font-normal">
+              ${q.tip}
+            </div>
+
+            <div class="mt-4 space-y-2 max-h-[42vh] overflow-y-auto pr-1">
+              ${q.options.map(opt => {
+                const isSel = selected.includes(opt.label);
+                return `
+                  <button onclick="handleOptionSelect('${opt.label.replace(/'/g, "\\'")}')" class="w-full p-3.5 rounded-2xl border text-left transition-all duration-200 flex items-center justify-between ${
+                    isSel ? 'bg-gradient-to-r from-rose-50 to-purple-50 border-rose-400 shadow-md ring-2 ring-rose-300/50' : 'bg-white/90 border-slate-200/80 hover:border-rose-200'
+                  }">
+                    <div class="flex items-start space-x-3 pr-2">
+                      <span class="text-2xl p-1.5 rounded-xl bg-slate-50">${opt.icon}</span>
+                      <div>
+                        <div class="text-xs font-semibold text-slate-800">${opt.label}</div>
+                        <div class="text-[11px] text-slate-500 mt-0.5 font-normal leading-tight">${opt.desc}</div>
+                      </div>
+                    </div>
+                    <div class="w-5 h-5 rounded-full border flex items-center justify-center transition-colors flex-shrink-0 ${isSel ? 'bg-rose-500 border-rose-500 text-white' : 'border-slate-300 bg-white'}">
+                      ${isSel ? '<i data-lucide="check" class="w-3 h-3"></i>' : ''}
+                    </div>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <div class="pt-3 pb-2 flex items-center space-x-3">
+            <button onclick="handlePrevAssessment()" class="py-3 px-5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium rounded-2xl transition-all text-sm flex items-center space-x-1">
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+              <span>Atrás</span>
+            </button>
+
+            <button onclick="handleNextAssessment()" ${!isValid ? 'disabled' : ''} class="flex-1 py-3 rounded-2xl font-medium text-white shadow-md transition-all duration-300 flex items-center justify-center space-x-2 text-sm ${
+              isValid ? 'bg-gradient-to-r from-rose-400 via-pink-400 to-purple-400 hover:from-rose-500 shadow-rose-200' : 'bg-slate-300 cursor-not-allowed opacity-70'
+            }">
+              <span>${state.assessmentStep === ASSESSMENT_QUESTIONS.length - 1 ? 'Crear Mi Manual 🌸' : 'Siguiente Paso'}</span>
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function handleOptionSelect(label) {
+      const q = ASSESSMENT_QUESTIONS[state.assessmentStep];
+      const cur = state.answers[q.id] || [];
+
+      if (q.type === 'single') {
+        state.answers[q.id] = [label];
+      } else {
+        if (cur.includes(label)) {
+          state.answers[q.id] = cur.filter(x => x !== label);
+        } else {
+          state.answers[q.id] = [...cur, label];
+        }
+      }
+      render();
+    }
+
+    function handleNextAssessment() {
+      if (state.assessmentStep < ASSESSMENT_QUESTIONS.length - 1) {
+        state.assessmentStep++;
+        render();
+      } else {
+        saveProfile();
+        navigateTo('processing');
+        setTimeout(() => navigateTo('manual'), 2200);
+      }
+    }
+
+    function handlePrevAssessment() {
+      if (state.assessmentStep > 0) {
+        state.assessmentStep--;
+        render();
+      } else {
+        navigateTo('onboarding');
+      }
+    }
+
+    function renderProcessing() {
+      return `
+        <div class="min-h-screen bg-gradient-to-b from-rose-50 via-purple-50 to-emerald-50 flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto relative">
+          <div class="relative mb-6">
+            <div class="w-32 h-32 rounded-full bg-rose-100/80 flex items-center justify-center animate-pulse">
+              <span class="text-6xl animate-bounce">🌸</span>
+            </div>
+            <div class="absolute inset-0 rounded-full border-4 border-rose-300/40 border-t-rose-500 animate-spin"></div>
+          </div>
+          <h2 class="text-2xl font-serif font-bold text-slate-800">Creando tu Libro Bloom... 🌸</h2>
+          <p class="text-xs text-slate-500 mt-2 max-w-xs leading-relaxed font-light">
+            Estamos redactando tu guía con las respuestas de tu cuestionario.
+          </p>
+        </div>
+      `;
+    }
+
+    // --- MANUAL ESTILO LIBRO DIGITAL / E-BOOK INTERACTIVO ---
+    function renderManualBook() {
+      const displayName = state.userName || 'Amiga Bloom';
+      const hair = state.answers[1]?.[0] || 'Natural';
+      const hairNeeds = state.answers[2]?.length ? state.answers[2].join(', ') : 'Salud general y suavidad';
+      const skinNeeds = state.answers[3]?.length ? state.answers[3].join(', ') : 'Hidratación y cuidado simple';
+      const timeCommit = state.answers[4]?.[0] || '10–20 minutos';
+      const habitsFocus = state.answers[5]?.length ? state.answers[5].join(', ') : 'Rutina balanceada e hidratación';
+      const moodState = state.answers[6]?.[0] || 'Equilibrado / En Paz';
+      const comfortActivities = state.answers[7]?.length ? state.answers[7].join(', ') : 'Tiempo a solas y descanso';
+      const innerCultivate = state.answers[8]?.length ? state.answers[8].join(', ') : 'Autoaceptación y calma';
+      const audioPref = state.answers[9]?.length ? state.answers[9].join(', ') : 'Sonidos ambientales y música suave';
+
+      const activeTab = state.manualActiveTab || 'cover';
+
+      return `
+        <div class="min-h-screen bg-amber-50/40 pb-28 p-4 max-w-md mx-auto text-slate-800">
+          <div class="flex items-center space-x-1 overflow-x-auto hide-scrollbar pb-3 pt-1 border-b border-rose-200/60 mb-4">
+            <button onclick="state.manualActiveTab='cover'; render();" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${activeTab==='cover' ? 'bg-rose-500 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200'}">
+              📖 Portada
+            </button>
+            <button onclick="state.manualActiveTab='cap1'; render();" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${activeTab==='cap1' ? 'bg-rose-500 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200'}">
+              Cap. I: Diagnóstico
+            </button>
+            <button onclick="state.manualActiveTab='cap2'; render();" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${activeTab==='cap2' ? 'bg-rose-500 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200'}">
+              Cap. II: Piel & Cabello
+            </button>
+            <button onclick="state.manualActiveTab='cap3'; render();" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${activeTab==='cap3' ? 'bg-rose-500 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200'}">
+              Cap. III: Mente & Espíritu
+            </button>
+            <button onclick="state.manualActiveTab='cap4'; render();" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${activeTab==='cap4' ? 'bg-rose-500 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200'}">
+              Cap. IV: Fuentes & QR
+            </button>
+          </div>
+
+          ${activeTab === 'cover' ? `
+            <div class="bg-gradient-to-b from-rose-100/90 via-pink-50 to-amber-50/80 rounded-3xl p-7 border-2 border-rose-200/80 book-shadow text-center relative overflow-hidden my-2">
+              <div class="border border-rose-300/60 p-6 rounded-2xl bg-white/40 backdrop-blur-sm">
+                <span class="text-4xl block mb-2">🌸</span>
+                <span class="text-[10px] uppercase font-bold tracking-widest text-rose-600 block mb-1">Volumen I • Edición Exclusiva</span>
+                <h1 class="text-2xl font-serif font-bold text-slate-800 leading-tight">LIBRO DE AUTOCUIDADO & BIENESTAR</h1>
+                <div class="w-12 h-0.5 bg-rose-400 mx-auto my-3"></div>
+                <p class="text-xs font-serif italic text-slate-600">“Escrito especialmente para ti”</p>
+                
+                <div class="mt-8 bg-white/90 p-4 rounded-2xl border border-rose-200 shadow-sm text-left">
+                  <span class="text-[10px] text-slate-400 block font-semibold">PROPIETARIA DEL MANUAL:</span>
+                  <div class="text-sm font-serif font-bold text-rose-700 mt-0.5">${displayName}</div>
+                  <span class="text-[10px] text-slate-500 block mt-1">Tiempo diario reservado: <strong>${timeCommit}</strong></span>
+                </div>
+
+                <div class="mt-6">
+                  <button onclick="state.manualActiveTab='cap1'; render();" class="w-full py-3 bg-slate-800 text-white font-medium text-xs rounded-2xl shadow-md flex items-center justify-center space-x-1.5">
+                    <span>Abrir Capítulo I</span>
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ` : ''}
+
+          ${activeTab === 'cap1' ? `
+            <div class="bg-white rounded-3xl p-6 border border-amber-200/80 book-shadow my-2">
+              <div class="flex justify-between items-center border-b pb-2 mb-4">
+                <span class="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Capítulo I</span>
+                <span class="text-xs font-serif text-slate-400">Pág. 1</span>
+              </div>
+
+              <h2 class="text-lg font-serif font-bold text-slate-800 mb-2">Tu Perfil Actual & Estructura de Tiempo ⏳</h2>
+              <p class="text-xs text-slate-600 leading-relaxed font-light mb-4">
+                Basado en tu diagnóstico inicial, hemos adaptado tus rituales a tu ventana de tiempo de <strong>${timeCommit}</strong>.
+              </p>
+
+              <div class="space-y-3 text-xs">
+                <div class="p-3.5 bg-rose-50/70 rounded-2xl border border-rose-100">
+                  <span class="font-bold text-rose-900 block mb-1">🌿 Estado Inicial Declarado:</span>
+                  <p class="text-slate-700 leading-relaxed">Te identificas actualmente en una etapa: <strong>${moodState}</strong>.</p>
+                </div>
+
+                <div class="p-3.5 bg-purple-50/70 rounded-2xl border border-purple-100">
+                  <span class="font-bold text-purple-900 block mb-1">🌱 Hábitos Prioritarios a Cultivar:</span>
+                  <p class="text-slate-700 leading-relaxed">${habitsFocus}.</p>
+                </div>
+
+                <div class="p-3.5 bg-amber-50/70 rounded-2xl border border-amber-100">
+                  <span class="font-bold text-amber-900 block mb-1">👑 Semillas de Crecimiento Interior:</span>
+                  <p class="text-slate-700 leading-relaxed">Deseas fortalecer principalmente: <strong>${innerCultivate}</strong>.</p>
+                </div>
+              </div>
+
+              <div class="mt-6 flex justify-between">
+                <button onclick="state.manualActiveTab='cover'; render();" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-semibold">Anterior</button>
+                <button onclick="state.manualActiveTab='cap2'; render();" class="px-4 py-2 bg-rose-500 text-white rounded-xl text-xs font-semibold shadow-sm">Capítulo II ➔</button>
+              </div>
+            </div>
+          ` : ''}
+
+          ${activeTab === 'cap2' ? `
+            <div class="bg-white rounded-3xl p-6 border border-amber-200/80 book-shadow my-2">
+              <div class="flex justify-between items-center border-b pb-2 mb-4">
+                <span class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Capítulo II</span>
+                <span class="text-xs font-serif text-slate-400">Pág. 2</span>
+              </div>
+
+              <h2 class="text-lg font-serif font-bold text-slate-800 mb-2">Prescripción Capilar & Skincare 🧴</h2>
+
+              <div class="bg-emerald-50/60 p-4 rounded-2xl border border-emerald-100 mb-4 text-xs">
+                <h3 class="font-serif font-bold text-emerald-900 mb-1 flex items-center gap-1">
+                  <span>💆‍♀️</span> <span>Ritual Capilar Personalizado</span>
+                </h3>
+                <p class="text-slate-700 mb-2">Para tu textura de cabello <strong>${hair}</strong> y tu meta de <strong>${hairNeeds}</strong>:</p>
+                <ul class="list-disc list-inside space-y-1 text-slate-600 font-light">
+                  <li>Lava con agua tibia y realiza masajes circulares en la raíz por 3 minutos.</li>
+                  <li>Aplica acondicionador o mascarilla de medios a puntas respetando tu estructura.</li>
+                  <li>Evita frotar toscamente con la toalla; presiona suavemente con tela de algodón.</li>
+                </ul>
+              </div>
+
+              <div class="bg-rose-50/60 p-4 rounded-2xl border border-rose-100 text-xs">
+                <h3 class="font-serif font-bold text-rose-900 mb-1 flex items-center gap-1">
+                  <span>🌸</span> <span>Rutina de Piel (Pautas AAD)</span>
+                </h3>
+                <p class="text-slate-700 mb-2">Enfoque seleccionado: <strong>${skinNeeds}</strong>:</p>
+                <ol class="list-decimal list-inside space-y-1 text-slate-600 font-light">
+                  <li><strong>Pasó 1:</strong> Limpiador dermatológico suave sin sulfatos irritantes.</li>
+                  <li><strong>Paso 2:</strong> Humectante con ácido hialurónico o ceramidas.</li>
+                  <li><strong>Paso 3:</strong> Fotoprotector solar FPS 30+ de amplio espectro.</li>
+                </ol>
+              </div>
+
+              <div class="mt-6 flex justify-between">
+                <button onclick="state.manualActiveTab='cap1'; render();" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-semibold">Anterior</button>
+                <button onclick="state.manualActiveTab='cap3'; render();" class="px-4 py-2 bg-rose-500 text-white rounded-xl text-xs font-semibold shadow-sm">Capítulo III ➔</button>
+              </div>
+            </div>
+          ` : ''}
+
+          ${activeTab === 'cap3' ? `
+            <div class="bg-white rounded-3xl p-6 border border-amber-200/80 book-shadow my-2">
+              <div class="flex justify-between items-center border-b pb-2 mb-4">
+                <span class="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Capítulo III</span>
+                <span class="text-xs font-serif text-slate-400">Pág. 3</span>
+              </div>
+
+              <h2 class="text-lg font-serif font-bold text-slate-800 mb-2">Tus Refugios & Pautas Emocionales 🦋</h2>
+
+              <div class="space-y-3 text-xs mb-4">
+                <div class="p-3.5 bg-purple-50/80 rounded-2xl border border-purple-100">
+                  <span class="font-bold text-purple-900 block mb-1">🎧 Preferencia de Audio & Relajación:</span>
+                  <p class="text-slate-700 leading-relaxed font-light">Disfrutas de: <strong>${audioPref}</strong>. Te sugerimos acompañar tus noches con la sección de Audio de BLOOM (Lluvia o Tono 432Hz).</p>
+                </div>
+
+                <div class="p-3.5 bg-rose-50/80 rounded-2xl border border-rose-100">
+                  <span class="font-bold text-rose-900 block mb-1">🛋️ Tus Fuentes de Cobijo en Días Difíciles:</span>
+                  <p class="text-slate-700 leading-relaxed font-light">Elegiste: <strong>${comfortActivities}</strong>. Recurre a estos momentos sin sentir ninguna culpa cuando necesites recargar energía.</p>
+                </div>
+              </div>
+
+              <div class="p-4 bg-slate-800 text-white rounded-2xl text-xs text-center">
+                <p class="font-serif italic">“Respira en 4 tiempos, mantén en 7 y exhala en 8. La calma siempre vive dentro de ti.”</p>
+              </div>
+
+              <div class="mt-6 flex justify-between">
+                <button onclick="state.manualActiveTab='cap2'; render();" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-semibold">Anterior</button>
+                <button onclick="state.manualActiveTab='cap4'; render();" class="px-4 py-2 bg-rose-500 text-white rounded-xl text-xs font-semibold shadow-sm">Capítulo IV ➔</button>
+              </div>
+            </div>
+          ` : ''}
+
+          ${activeTab === 'cap4' ? `
+            <div class="bg-white rounded-3xl p-6 border border-amber-200/80 book-shadow my-2">
+              <div class="flex justify-between items-center border-b pb-2 mb-4">
+                <span class="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Capítulo IV</span>
+                <span class="text-xs font-serif text-slate-400">Pág. 4</span>
+              </div>
+
+              <h2 class="text-lg font-serif font-bold text-slate-800 mb-2">Validación & Referencia QR 📱</h2>
+              <p class="text-xs text-slate-600 leading-relaxed font-light mb-4">
+                Este libro ha sido estructurado siguiendo parámetros validados por la American Academy of Dermatology y principios de psicología cognitiva.
+              </p>
+
+              <div class="bg-rose-50/90 rounded-2xl p-4 border border-rose-200 shadow-sm mb-4 text-center flex flex-col items-center">
+                <a href="${EXTERNAL_INFO_URL}" target="_blank" id="qr-code-manual" class="p-2 bg-white rounded-2xl border border-rose-200 shadow-sm inline-block cursor-pointer" title="Haz clic para visitar la web de información"></a>
+                <a href="${EXTERNAL_INFO_URL}" target="_blank" class="mt-3 text-xs font-bold text-rose-700 underline block">Abrir Web Oficial Dermatológica (AAD) ↗</a>
+              </div>
+
+              <button onclick="navigateTo('dashboard')" class="w-full py-3.5 bg-slate-800 text-white font-medium rounded-2xl shadow-md text-xs flex items-center justify-center space-x-2">
+                <span>Ir al Panel Principal de BLOOM</span>
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    function renderDashboard() {
+      const displayName = state.userName || 'Amiga Bloom';
+      return `
+        <div class="min-h-screen bg-gradient-to-b from-rose-50/40 via-purple-50/20 to-slate-50 pb-24 p-4 max-w-md mx-auto text-slate-800">
+          <div class="pt-2 pb-3 flex justify-between items-center">
+            <div>
+              <h1 class="text-2xl font-serif font-bold text-slate-800">Hola, ${displayName} 🌸</h1>
+              <p class="text-xs text-slate-500 font-light mt-0.5">“¿Qué necesitas hoy?”</p>
+            </div>
+          </div>
+
+          <!-- Banner Resumen Emocional y Lunar -->
+          <div class="bg-gradient-to-r from-purple-100/80 via-pink-100/70 to-rose-100/80 rounded-3xl p-4 border border-purple-200/60 shadow-sm mb-4 flex items-center justify-between">
+            <div>
+              <span class="text-[10px] uppercase font-bold text-purple-700 tracking-wider">Hoy en BLOOM</span>
+              <div class="text-xs font-serif font-bold text-slate-800 mt-0.5">3 de Septiembre • Gibosa Menguante 🌖</div>
+              <p class="text-[11px] text-slate-600 mt-0.5">Tu estado registrado: <span class="font-semibold">${state.moodCalendar[3]?.emoji || '🌤️'} ${state.moodCalendar[3]?.note || 'Sin registro'}</span></p>
+            </div>
+            <button onclick="navigateTo('emotional')" class="px-3 py-1.5 bg-white/90 rounded-xl text-xs font-medium text-purple-700 shadow-sm border border-purple-200 hover:bg-white">
+              Registrar
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 gap-3">
+            <button onclick="navigateTo('manual')" class="p-4 bg-white rounded-3xl border border-rose-100 shadow-sm flex items-center justify-between text-left">
+              <div class="flex items-center space-x-3.5">
+                <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-xl">📖</div>
+                <div>
+                  <h3 class="font-serif font-bold text-slate-800 text-sm">Mi Libro Bloom</h3>
+                  <p class="text-xs text-slate-500 mt-0.5">Tu e-book personalizado de autocuidado</p>
+                </div>
+              </div>
+              <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400"></i>
+            </button>
+
+            <button onclick="navigateTo('emotional')" class="p-4 bg-white rounded-3xl border border-rose-100 shadow-sm flex items-center justify-between text-left">
+              <div class="flex items-center space-x-3.5">
+                <div class="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center text-xl">🦋</div>
+                <div>
+                  <h3 class="font-serif font-bold text-slate-800 text-sm">Calendario de Emociones</h3>
+                  <p class="text-xs text-slate-500 mt-0.5">Seguimiento, respiración y diario</p>
+                </div>
+              </div>
+              <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400"></i>
+            </button>
+
+            <button onclick="navigateTo('physical')" class="p-4 bg-white rounded-3xl border border-rose-100 shadow-sm flex items-center justify-between text-left">
+              <div class="flex items-center space-x-3.5">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl">🧴</div>
+                <div>
+                  <h3 class="font-serif font-bold text-slate-800 text-sm">Cuidado Físico</h3>
+                  <p class="text-xs text-slate-500 mt-0.5">Piel y Cabello</p>
+                </div>
+              </div>
+              <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400"></i>
+            </button>
+
+            <button onclick="navigateTo('audio')" class="p-4 bg-white rounded-3xl border border-rose-100 shadow-sm flex items-center justify-between text-left">
+              <div class="flex items-center space-x-3.5">
+                <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl">🎧</div>
+                <div>
+                  <h3 class="font-serif font-bold text-slate-800 text-sm">Audio, Spotify & Podcasts</h3>
+                  <p class="text-xs text-slate-500 mt-0.5">Música, relajación en vivo y episodios</p>
+                </div>
+              </div>
+              <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400"></i>
+            </button>
+
+            <button onclick="navigateTo('moon')" class="p-4 bg-[#1E1B3A] text-white rounded-3xl border border-purple-900 shadow-sm flex items-center justify-between text-left">
+              <div class="flex items-center space-x-3.5">
+                <div class="w-12 h-12 rounded-2xl bg-purple-900/80 text-purple-200 flex items-center justify-center text-xl">🌙</div>
+                <div>
+                  <h3 class="font-serif font-bold text-purple-100 text-sm">Calendario Lunar Interactivo</h3>
+                  <p class="text-xs text-purple-300/80 mt-0.5">Septiembre 2026 • 8 Fases</p>
+                </div>
+              </div>
+              <i data-lucide="chevron-right" class="w-5 h-5 text-purple-400"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPhysical() {
+      return `
+        <div class="min-h-screen bg-gradient-to-b from-rose-50/40 via-emerald-50/30 to-slate-50 pb-24 p-4 max-w-md mx-auto text-slate-800">
+          <h1 class="text-2xl font-serif font-bold text-slate-800 mb-4">Cuidado Físico 🧴</h1>
+
+          <div class="bg-white rounded-3xl p-5 border border-emerald-100 shadow-sm mb-4">
+            <h3 class="font-serif font-bold text-slate-800 text-sm mb-2">💆‍♀️ Capilar Suave</h3>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Usa agua tibia y masajea suavemente las yemas de tus dedos sobre la raíz para promover la circulación del cuero cabelludo.
+            </p>
+          </div>
+
+          <div class="bg-white rounded-3xl p-5 border border-rose-100 shadow-sm mb-4">
+            <h3 class="font-serif font-bold text-slate-800 text-sm mb-2">🌸 Skincare Diario (Pautas AAD)</h3>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              1. Limpieza Suave → 2. Hidratación Nutritiva → 3. Protector Solar de Amplio Espectro (FPS 30+).
+            </p>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderEmotional() {
+      const selectedDay = state.selectedEmotionDate || 3;
+      const dayData = state.moodCalendar[selectedDay] || { emoji: '🌤️', typeId: 'fluctuating', note: '' };
+      const selectedType = EMOTION_TYPES.find(t => t.id === dayData.typeId) || EMOTION_TYPES[0];
+
+      const daysArray = Array.from({ length: 30 }, (_, i) => i + 1);
+
+      return `
+        <div class="min-h-screen bg-gradient-to-b from-purple-50/50 via-rose-50/40 to-slate-50 pb-24 p-4 max-w-md mx-auto text-slate-800">
+          <div class="mb-4">
+            <span class="px-3 py-1 rounded-full bg-purple-100 text-purple-800 text-xs font-semibold">Registro de Conciencia</span>
+            <h1 class="text-2xl font-serif font-bold text-slate-800 mt-1">Calendario de Emociones 🦋</h1>
+            <p class="text-xs text-slate-500 font-light mt-0.5 leading-relaxed">
+              Identificar tus sentimientos diarios te permite comprender tus patrones de bienestar sin juzgarte.
+            </p>
+          </div>
+
+          <div class="bg-white rounded-3xl p-5 border border-purple-100 shadow-sm mb-5">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="font-serif font-bold text-slate-800 text-sm">Septiembre 2026</h3>
+              <span class="text-[11px] text-purple-600 bg-purple-50 px-2.5 py-0.5 rounded-full font-medium">30 Días</span>
+            </div>
+
+            <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 mb-2">
+              <span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span>
+            </div>
+
+            <div class="grid grid-cols-7 gap-1.5">
+              ${daysArray.map(day => {
+                const entry = state.moodCalendar[day];
+                const isSelected = day === selectedDay;
+                return `
+                  <button onclick="selectEmotionDay(${day})" class="aspect-square rounded-2xl flex flex-col items-center justify-center p-1 border transition-all text-xs relative ${
+                    isSelected
+                      ? 'bg-gradient-to-br from-purple-500 to-rose-400 text-white font-bold border-purple-500 shadow-md ring-2 ring-purple-200'
+                      : entry
+                        ? 'bg-purple-50/80 border-purple-200 text-slate-800 hover:bg-purple-100'
+                        : 'bg-slate-50 border-slate-100 text-slate-500 hover:bg-slate-100'
+                  }">
+                    <span class="text-[9px] ${isSelected ? 'text-white' : 'text-slate-400'}">${day}</span>
+                    <span class="text-base leading-none mt-0.5">${entry ? entry.emoji : '•'}</span>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <div class="bg-white rounded-3xl p-5 border border-purple-100 shadow-sm mb-5">
+            <div class="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
+              <span class="font-serif font-bold text-slate-800 text-sm">Día ${selectedDay} de Septiembre, 2026</span>
+              <span class="text-2xl">${dayData.emoji}</span>
+            </div>
+
+            <p class="text-xs text-slate-500 mb-3">¿Cómo te sientes o te sentiste este día?</p>
+
+            <div class="grid grid-cols-3 gap-2 mb-4">
+              ${EMOTION_TYPES.map(type => `
+                <button onclick="saveDayEmotion(${selectedDay}, '${type.id}', '${type.emoji}')" class="p-2.5 rounded-2xl border text-center transition-all ${
+                  dayData.typeId === type.id
+                    ? 'bg-rose-50 border-rose-400 text-rose-700 font-bold shadow-sm'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                }">
+                  <span class="text-xl block mb-0.5">${type.emoji}</span>
+                  <span class="text-[10px] block truncate font-medium">${type.name.split('/')[0]}</span>
+                </button>
+              `).join('')}
+            </div>
+
+            <div class="bg-purple-50/70 rounded-2xl p-4 border border-purple-100 text-xs text-slate-700 mb-3">
+              <div class="font-bold text-purple-900 mb-1 flex items-center gap-1">
+                <span>💡</span>
+                <span>Sobre este estado (${selectedType.name}):</span>
+              </div>
+              <p class="leading-relaxed mb-2">${selectedType.desc}</p>
+              <div class="bg-white/80 p-2.5 rounded-xl border border-purple-200/50 text-[11px] text-purple-800">
+                <strong>Recomendación Bloom:</strong> ${selectedType.recommendation}
+              </div>
+            </div>
+
+            <div>
+              <label class="text-[11px] font-semibold text-slate-600 block mb-1">Nota o pensamiento breve:</label>
+              <div class="flex space-x-2">
+                <input id="emotion-note-input" type="text" value="${dayData.note || ''}" placeholder="Escribe un pensamiento para hoy..." class="flex-1 px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-400" />
+                <button onclick="saveDayNote(${selectedDay})" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold shadow-sm">
+                  Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-3xl p-6 border border-purple-100 shadow-sm mb-5 text-center">
+            <span class="text-xs uppercase tracking-wider text-purple-600 font-semibold bg-purple-50 px-3 py-1 rounded-full">
+              Respiración Guiada 4-7-8
+            </span>
+            <p class="text-xs text-slate-500 mt-2">Técnica para desactivar el sistema nervioso simpático y calmar la mente.</p>
+
+            <div class="my-6 relative flex items-center justify-center">
+              <div id="breathing-circle" class="w-36 h-36 rounded-full border-4 border-purple-300 flex items-center justify-center transition-all duration-1000 bg-purple-50/50">
+                <div class="text-center">
+                  <div id="breathing-timer" class="text-2xl font-serif font-bold text-purple-900">${state.breathingActive ? state.breathingTimer : 'Iniciar'}</div>
+                  <div id="breathing-phase" class="text-xs text-purple-700 font-medium mt-0.5">${state.breathingActive ? state.breathingPhase : 'Toca abajo'}</div>
+                </div>
+              </div>
+            </div>
+
+            <button onclick="toggleBreathing()" class="px-6 py-2.5 rounded-2xl font-medium text-xs shadow-md text-white ${state.breathingActive ? 'bg-rose-500' : 'bg-purple-600'}">
+              ${state.breathingActive ? 'Pausar Respiración' : 'Comenzar Sesión'}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function selectEmotionDay(day) {
+      state.selectedEmotionDate = day;
+      render();
+    }
+
+    function saveDayEmotion(day, typeId, emoji) {
+      if (!state.moodCalendar[day]) {
+        state.moodCalendar[day] = { emoji, typeId, note: '' };
+      } else {
+        state.moodCalendar[day].typeId = typeId;
+        state.moodCalendar[day].emoji = emoji;
+      }
+      saveProfile();
+      showToast(`Emoción guardada para el día ${day} de Septiembre`);
+      render();
+    }
+
+    function saveDayNote(day) {
+      const input = document.getElementById('emotion-note-input');
+      if (input) {
+        if (!state.moodCalendar[day]) {
+          state.moodCalendar[day] = { emoji: '🌸', typeId: 'serene', note: input.value };
+        } else {
+          state.moodCalendar[day].note = input.value;
+        }
+        saveProfile();
+        showToast('Nota guardada con éxito 🌸');
+        render();
+      }
+    }
+
+    function renderMoonCalendar() {
+      const selectedDay = state.selectedMoonDate || 3;
+      const phaseObj = SEPTEMBER_MOON_DATA[selectedDay] || MOON_PHASES[0];
+
+      const daysArray = Array.from({ length: 30 }, (_, i) => i + 1);
+
+      return `
+        <div class="min-h-screen bg-[#1A1733] text-purple-100 pb-24 p-4 max-w-md mx-auto">
+          <div class="mb-4">
+            <span class="px-3 py-1 rounded-full bg-purple-900/80 text-amber-300 text-xs font-semibold border border-purple-700">Ciclos Naturales</span>
+            <h1 class="text-2xl font-serif font-bold text-white mt-1">Calendario Lunar 🌙</h1>
+            <p class="text-xs text-purple-300 font-light mt-0.5 leading-relaxed">
+              Explora las 8 fases lunares de Septiembre 2026 y ajusta tu autocuidado al ritmo cósmico.
+            </p>
+          </div>
+
+          <div class="bg-[#2A264D] p-6 rounded-3xl border border-purple-500/30 text-center mb-5 shadow-xl relative overflow-hidden">
+            <div class="absolute -right-6 -top-6 w-24 h-24 bg-purple-500/10 rounded-full blur-xl"></div>
+            <span class="text-6xl inline-block transform hover:scale-110 transition-transform">${phaseObj.emoji}</span>
+            <h2 class="text-xl font-serif font-bold text-white mt-2">${phaseObj.name}</h2>
+            <p class="text-xs text-amber-300 font-medium mt-0.5">${selectedDay} de Septiembre, 2026</p>
+
+            <div class="mt-4 pt-4 border-t border-purple-800/60 grid grid-cols-1 gap-2 text-left text-xs">
+              <div class="bg-[#1E1B3A] p-3 rounded-2xl border border-purple-900">
+                <span class="text-purple-300 font-bold block mb-0.5">🌱 Simbolismo y Energía:</span>
+                <p class="text-purple-100 leading-relaxed">${phaseObj.desc}</p>
+              </div>
+
+              <div class="bg-[#1E1B3A] p-3 rounded-2xl border border-purple-900">
+                <span class="text-purple-300 font-bold block mb-0.5">💭 Guía Emocional:</span>
+                <p class="text-purple-100 leading-relaxed">${phaseObj.emotionGuidance}</p>
+              </div>
+
+              <div class="bg-[#1E1B3A] p-3 rounded-2xl border border-purple-900">
+                <span class="text-purple-300 font-bold block mb-0.5">🧴 Enfoque de Piel y Cabello:</span>
+                <p class="text-purple-100 leading-relaxed">${phaseObj.focus}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-[#2A264D]/80 p-5 rounded-3xl border border-purple-500/20 mb-5">
+            <h3 class="font-serif font-bold text-white text-sm mb-3">Fases de Septiembre 2026</h3>
+            <div class="grid grid-cols-7 gap-1.5">
+              ${daysArray.map(day => {
+                const phase = SEPTEMBER_MOON_DATA[day];
+                const isSelected = day === selectedDay;
+                return `
+                  <button onclick="selectMoonDay(${day})" class="aspect-square rounded-2xl flex flex-col items-center justify-center p-1 border transition-all ${
+                    isSelected
+                      ? 'bg-purple-600 text-white font-bold border-amber-300 shadow-md ring-2 ring-purple-400'
+                      : 'bg-[#1E1B3A] border-purple-900/60 text-purple-300 hover:bg-purple-900/40'
+                  }">
+                    <span class="text-[9px] ${isSelected ? 'text-white' : 'text-purple-400'}">${day}</span>
+                    <span class="text-sm leading-none mt-0.5">${phase.emoji}</span>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <div class="bg-[#2A264D]/60 p-5 rounded-3xl border border-purple-500/20">
+            <h3 class="font-serif font-bold text-white text-sm mb-3">Las 8 Fases del Ciclo Lunar 🌌</h3>
+            <div class="space-y-3">
+              ${MOON_PHASES.map(phase => `
+                <div class="flex items-start space-x-3 p-3 bg-[#1E1B3A]/80 rounded-2xl border border-purple-900/50">
+                  <span class="text-2xl">${phase.emoji}</span>
+                  <div>
+                    <h4 class="text-xs font-bold text-amber-200">${phase.name}</h4>
+                    <p class="text-[11px] text-purple-200 mt-0.5 leading-snug">${phase.desc}</p>
+                    <p class="text-[10px] text-purple-400 mt-1"><strong>Recomendación:</strong> ${phase.focus}</p>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function selectMoonDay(day) {
+      state.selectedMoonDate = day;
+      render();
+    }
+
+    // --- PANTALLA: AUDIO AMBIENTAL, SPOTIFY & YOUTUBE ---
+    function renderAudio() {
+      return `
+        <div class="min-h-screen bg-gradient-to-b from-amber-50/40 via-rose-50/30 to-slate-50 pb-24 p-4 max-w-md mx-auto text-slate-800">
+          <div class="mb-4">
+            <span class="px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">Espacio Sonoro</span>
+            <h1 class="text-2xl font-serif font-bold text-slate-800 mt-1">Audio y Relajación 🎧</h1>
+            <p class="text-xs text-slate-500 font-light mt-0.5 leading-relaxed">
+              Explora sonidos ambientales en vivo, listas de Spotify y episodios de YouTube para tus momentos de paz.
+            </p>
+          </div>
+
+          <!-- SECCIÓN 1: GENERADOR AMBIENTAL EN VIVO -->
+          <div class="mb-5">
+            <h2 class="text-xs uppercase font-bold text-slate-400 tracking-wider mb-2 flex items-center gap-1">
+              <span>🔊</span> <span>Paisajes Sonoros en Vivo</span>
+            </h2>
+            <div class="space-y-2.5">
+              <div class="p-3.5 bg-white rounded-2xl border border-amber-100 flex justify-between items-center shadow-sm">
+                <div>
+                  <div class="text-xs font-bold text-slate-800">Gotas de Lluvia Suave 🌧️</div>
+                  <div class="text-[10px] text-slate-500">Ruido blanco filtrado para relajación inmediata</div>
+                </div>
+                <button onclick="handleAudioPlay('rain')" class="p-2.5 bg-amber-200 hover:bg-amber-300 rounded-xl transition-colors">
+                  <i data-lucide="${soundEngine.currentTrack === 'rain' && soundEngine.isPlaying ? 'pause' : 'play'}" class="w-4 h-4 text-amber-900"></i>
+                </button>
+              </div>
+
+              <div class="p-3.5 bg-white rounded-2xl border border-purple-100 flex justify-between items-center shadow-sm">
+                <div>
+                  <div class="text-xs font-bold text-slate-800">Tono Armónico Sereno 🧘</div>
+                  <div class="text-[10px] text-slate-500">Acorde armónico pacificador</div>
+                </div>
+                <button onclick="handleAudioPlay('drone')" class="p-3.5 bg-purple-200 hover:bg-purple-300 rounded-xl transition-colors">
+                  <i data-lucide="${soundEngine.currentTrack === 'drone' && soundEngine.isPlaying ? 'pause' : 'play'}" class="w-4 h-4 text-purple-900"></i>
+                </button>
+              </div>
+
+              <div class="p-3.5 bg-white rounded-2xl border border-rose-100 flex justify-between items-center shadow-sm">
+                <div>
+                  <div class="text-xs font-bold text-slate-800">Cuenco Tibetano 432Hz 🔔</div>
+                  <div class="text-[10px] text-slate-500">Resonancia pacífica de sanación</div>
+                </div>
+                <button onclick="handleAudioPlay('bowl')" class="p-2.5 bg-rose-200 hover:bg-rose-300 rounded-xl transition-colors">
+                  <i data-lucide="${soundEngine.currentTrack === 'bowl' && soundEngine.isPlaying ? 'pause' : 'play'}" class="w-4 h-4 text-rose-900"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 2: LISTAS Y CANCIONES DE SPOTIFY -->
+          <div class="mb-5">
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="text-xs uppercase font-bold text-emerald-600 tracking-wider flex items-center gap-1">
+                <span>🟢</span> <span>Música & Playlists de Spotify</span>
+              </h2>
+              <span class="text-[10px] text-slate-400">Curaduría Bloom</span>
+            </div>
+            <div class="space-y-2.5">
+              ${SPOTIFY_PLAYLISTS.map(item => `
+                <div class="p-3.5 bg-white rounded-2xl border border-emerald-100/80 shadow-sm flex items-center justify-between">
+                  <div class="pr-2">
+                    <div class="text-xs font-bold text-slate-800 flex items-center gap-1">
+                      <span>🎵</span> <span>${item.title}</span>
+                    </div>
+                    <div class="text-[10px] text-emerald-700 font-medium">${item.artist}</div>
+                    <p class="text-[10px] text-slate-500 mt-0.5 font-light leading-tight">${item.desc}</p>
+                  </div>
+                  <a href="${item.link}" target="_blank" class="p-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center transition-colors flex-shrink-0" title="Escuchar en Spotify">
+                    <i data-lucide="external-link" class="w-4 h-4"></i>
+                  </a>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- SECCIÓN 3: PODCASTS Y MEDITACIONES DE YOUTUBE -->
+          <div class="mb-5">
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="text-xs uppercase font-bold text-red-600 tracking-wider flex items-center gap-1">
+                <span>🔴</span> <span>Podcasts & Meditaciones (YouTube)</span>
+              </h2>
+              <span class="text-[10px] text-slate-400">Canales Recomendados</span>
+            </div>
+            <div class="space-y-2.5">
+              ${YOUTUBE_PODCASTS.map(pod => `
+                <div class="p-3.5 bg-white rounded-2xl border border-red-100/80 shadow-sm flex items-center justify-between">
+                  <div class="pr-2">
+                    <div class="text-xs font-bold text-slate-800 flex items-center gap-1">
+                      <span>🎙️</span> <span>${pod.title}</span>
+                    </div>
+                    <div class="text-[10px] text-red-600 font-medium">${pod.channel}</div>
+                    <p class="text-[10px] text-slate-500 mt-0.5 font-light leading-tight">${pod.desc}</p>
+                  </div>
+                  <a href="${pod.link}" target="_blank" class="p-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl flex items-center justify-center transition-colors flex-shrink-0" title="Ver en YouTube">
+                    <i data-lucide="youtube" class="w-4 h-4"></i>
+                  </a>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function handleAudioPlay(track) {
+      if (soundEngine.currentTrack === track && soundEngine.isPlaying) {
+        soundEngine.stop();
+      } else {
+        if (track === 'rain') soundEngine.playRain();
+        if (track === 'drone') soundEngine.playCalmDrone();
+        if (track === 'bowl') soundEngine.playSingingBowl();
+      }
+      render();
+    }
+
+    function renderHabits() {
+      const water = state.habits.find(h => h.id === 'water');
+      return `
+        <div class="min-h-screen bg-gradient-to-b from-teal-50/40 via-rose-50/30 to-slate-50 pb-24 p-4 max-w-md mx-auto text-slate-800">
+          <h1 class="text-2xl font-serif font-bold text-slate-800 mb-4">Hábitos Diarios 🌱</h1>
+
+          <div class="p-4 bg-white rounded-3xl border border-teal-100 shadow-sm flex items-center justify-between mb-3">
+            <div>
+              <div class="text-sm font-bold text-slate-800">Meta de Agua 💧</div>
+              <div class="text-xs text-slate-500">${water.count} / 8 vasos hoy</div>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button onclick="updateWater(-1)" class="w-8 h-8 rounded-full bg-slate-100 font-bold">-</button>
+              <button onclick="updateWater(1)" class="w-8 h-8 rounded-full bg-teal-500 text-white font-bold">+</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function updateWater(delta) {
+      const water = state.habits.find(h => h.id === 'water');
+      water.count = Math.max(0, Math.min(12, water.count + delta));
+      render();
+    }
+
+    // --- PANTALLA DE PERFIL Y CÓDIGO QR CON REDIRECCIÓN WEB ---
+    function renderProfile() {
+      return `
+        <div class="min-h-screen bg-gradient-to-b from-rose-50/40 via-purple-50/30 to-slate-50 pb-24 p-4 max-w-md mx-auto text-slate-800">
+          <h1 class="text-2xl font-serif font-bold text-slate-800 mb-4">Perfil y Ajustes 👤</h1>
+
+          <div class="bg-white rounded-3xl p-5 border border-rose-100 shadow-sm mb-4">
+            <label class="text-xs font-semibold text-slate-700 block mb-1">Nombre o Título Preferido</label>
+            <input type="text" value="${state.userName || ''}" onchange="state.userName=this.value; saveProfile(); showToast('Nombre actualizado');" class="w-full p-3 text-xs bg-slate-50 rounded-2xl border border-slate-200" placeholder="Escribe tu nombre..." />
+          </div>
+
+          <!-- Botón y Código QR de Fuentes y Referencias -->
+          <div class="bg-white rounded-3xl p-5 border border-purple-100 shadow-sm mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <div>
+                <h3 class="font-serif font-bold text-slate-800 text-sm">Fuentes & Redirección Web 🌐</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Escanea o haz clic para abrir la web de fuentes médicas (AAD).</p>
+              </div>
+            </div>
+
+            <!-- Código QR Generado e Interactivo -->
+            <div class="my-3 flex flex-col items-center justify-center p-4 bg-purple-50/50 rounded-2xl border border-purple-100">
+              <a href="${EXTERNAL_INFO_URL}" target="_blank" id="qr-code-references" class="p-2 bg-white rounded-xl shadow-sm border border-purple-200 block cursor-pointer" title="Abrir página oficial de fuentes AAD"></a>
+              <a href="${EXTERNAL_INFO_URL}" target="_blank" class="text-[11px] text-purple-700 font-bold mt-2 hover:underline">Escanea o Toca Aquí para Abrir la Web ↗</a>
+            </div>
+
+            <div class="space-y-2">
+              <a href="${EXTERNAL_INFO_URL}" target="_blank" class="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs rounded-2xl flex items-center justify-center space-x-1 shadow-sm transition-colors text-center block">
+                <span>Abrir Web Oficial de Fuentes (AAD) ↗</span>
+              </a>
+
+              <button onclick="openReferencesModal()" class="w-full py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-800 font-semibold text-xs rounded-2xl border border-purple-200 transition-colors">
+                Ver Resumen de Referencias en Pantalla
+              </button>
+            </div>
+          </div>
+
+          <button onclick="localStorage.clear(); location.reload();" class="w-full py-3 bg-rose-100 text-rose-700 font-medium text-xs rounded-2xl">
+            Reiniciar Aplicación (Volver al Día 1)
+          </button>
+
+          <!-- Modal de Referencias incorporado dinámicamente -->
+          ${state.showReferencesModal ? renderReferencesModal() : ''}
+        </div>
+      `;
+    }
+
+    function openReferencesModal() {
+      state.showReferencesModal = true;
+      render();
+    }
+
+    function closeReferencesModal() {
+      state.showReferencesModal = false;
+      render();
+    }
+
+    function renderReferencesModal() {
+      return `
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div class="bg-white rounded-3xl p-5 max-w-sm w-full max-h-[80vh] overflow-y-auto shadow-2xl border border-rose-100">
+            <div class="flex justify-between items-center mb-3 border-b pb-2">
+              <h3 class="font-serif font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                <span>📚</span>
+                <span>Fuentes y Referencias</span>
+              </h3>
+              <button onclick="closeReferencesModal()" class="text-slate-400 hover:text-slate-600 font-bold text-sm">✕</button>
+            </div>
+
+            <div class="space-y-3 text-xs text-slate-600">
+              <div class="p-3 bg-rose-50/70 rounded-2xl border border-rose-100">
+                <span class="font-bold text-rose-900 block">1. Cuidado de la Piel (Skincare)</span>
+                <p class="mt-0.5 text-[11px] leading-relaxed">
+                  <strong>American Academy of Dermatology (AAD):</strong> Recomendaciones esenciales de fotoprotección diaria con protector solar de amplio espectro (FPS 30+), limpieza suave y mantenimiento de la barrera cutánea.
+                </p>
+                <a href="${EXTERNAL_INFO_URL}" target="_blank" class="mt-1 inline-block text-[10px] font-bold text-rose-700 underline">Visitar sitio web oficial ↗</a>
+              </div>
+
+              <div class="p-3 bg-purple-50/70 rounded-2xl border border-purple-100">
+                <span class="font-bold text-purple-900 block">2. Bienestar Emocional y Respiración</span>
+                <p class="mt-0.5 text-[11px] leading-relaxed">
+                  <strong>Dr. Andrew Weil (Técnica 4-7-8) & APA:</strong> La respiración rítmica regulada activa el sistema parasimpático para reducir los niveles de cortisol y la ansiedad. El diario reflexivo promueve la autorregulación emocional.
+                </p>
+              </div>
+
+              <div class="p-3 bg-emerald-50/70 rounded-2xl border border-emerald-100">
+                <span class="font-bold text-emerald-900 block">3. Salubridad Capilar</span>
+                <p class="mt-0.5 text-[11px] leading-relaxed">
+                  <strong>Journal of Cosmetic Dermatology:</strong> Guías de cuidado según porosidad del cabello, uso de lípidos naturales para sellar humedad en hebras rizadas y masajes capilares suaves para la estimulación de la microcirculación.
+                </p>
+              </div>
+
+              <div class="p-3 bg-amber-50/70 rounded-2xl border border-amber-100">
+                <span class="font-bold text-amber-900 block">4. Cronobiología y Hábitos</span>
+                <p class="mt-0.5 text-[11px] leading-relaxed">
+                  <strong>Journal of Biological Rhythms:</strong> La alineación con ciclos de descanso regular y la hidratación continua apoyan la restauración fisiológica celular.
+                </p>
+              </div>
+            </div>
+
+            <button onclick="closeReferencesModal()" class="w-full mt-4 py-2.5 bg-slate-800 text-white rounded-2xl text-xs font-semibold">
+              Entendido
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // Inicializar la App al Cargar el DOM
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
